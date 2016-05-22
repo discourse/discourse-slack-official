@@ -1,6 +1,6 @@
 Impending features:
 - [x] Post subscription foundation
-- [ ] More rhobust command parsing 
+- [ ] More robust command parsing 
 - [ ] User access control (restricting use to certain users, dealing with hidden posts)
 - [ ] Subscribe by link
 - [ ] Installation step-by-step [WIP]
