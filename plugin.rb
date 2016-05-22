@@ -28,7 +28,7 @@ after_initialize do
 
   class ::DiscourseSlack::Slack
     @ws = nil
-    @self = nil
+    @me = nil
 
     def initialize
       join_slack
@@ -65,41 +65,40 @@ after_initialize do
       uri = URI(url)
       response = JSON.parse( Net::HTTP.get(uri) )
 
-      @self = response["self"]
+      @me = response["self"]
 
-      Thread.new {
-        EM.schedule do 
-          @ws = WebSocket::EventMachine::Client.connect(:uri => (response["url"] || nil))
-        
-          @ws.onopen do
-            block.call @ws if block
-          end
+   
+      EM.schedule do 
+        @ws = WebSocket::EventMachine::Client.connect(:uri => (response["url"] || nil))
+      
+        @ws.onopen do
+          block.call @ws if block
+        end
 
-          @ws.onmessage do |msg, type|
-            obj = JSON.parse(msg)
-            puts "Received message: #{msg.to_str}"
+        @ws.onmessage do |msg, type|
+          obj = JSON.parse(msg)
+          puts "Received message: #{msg.to_str}"
 
-            if obj["type"].eql?("message") && obj["text"] && obj["text"].include?(@self["id"])
-              tokens = obj["text"].split(" ")
-              puts tokens
-              if tokens.size == 4
-                cat = Category.find_by_slug(tokens[3])
-                if cat
-                  follow cat.id
-                  post_message cat.slug
-                else
-                  post_message "No such category"
-                end
-              elsif tokens.size == 3
+          if obj["type"].eql?("message") && obj["text"] && obj["text"].include?(@me["id"])
+            tokens = obj["text"].split(" ")
+            puts tokens
+            if tokens.size == 4
+              cat = Category.find_by_slug(tokens[3])
+              if cat
+                self.follow(cat.id, 'categories')
+                post_message cat.slug
+              else
+                post_message "No such category"
               end
+            elsif tokens.size == 3
             end
           end
-
-          @ws.onclose do |code, reason|
-            puts "Disconnected with status code: #{code}\n #{reason}"
-          end
         end
-      }
+
+        @ws.onclose do |code, reason|
+          puts "Disconnected with status code: #{code}\n #{reason}"
+        end
+      end
     end
 
     def post_message(text)
@@ -108,7 +107,7 @@ after_initialize do
           message = {
             "id" => 1,
             "type" => "message",
-            "channel" => "C0306MSN7",
+            "channel" => "G1APTF02F",
             "text" => text
           }
 
