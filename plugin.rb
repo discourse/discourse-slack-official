@@ -67,7 +67,7 @@ after_initialize do
 
       @me = response["self"]
 
-   
+      # TODO move handlers
       EM.schedule do 
         @ws = WebSocket::EventMachine::Client.connect(:uri => (response["url"] || nil))
       
@@ -78,6 +78,7 @@ after_initialize do
         @ws.onmessage do |msg, type|
           obj = JSON.parse(msg)
           puts "Received message: #{msg.to_str}"
+          @@commands['subscribe'].call 'test'
 
           if obj["type"].eql?("message") && obj["text"] && obj["text"].include?(@me["id"])
             tokens = obj["text"].split(" ")
@@ -85,10 +86,10 @@ after_initialize do
             if tokens.size == 4
               cat = Category.find_by_slug(tokens[3])
               if cat
-                self.follow(cat.id, 'categories')
-                post_message cat.slug
+                self.class.follow(cat.id, 'categories')
+                post_message "Followed category #{cat.slug}", obj["channel"]
               else
-                post_message "No such category"
+                post_message "No such category", obj["channel"]
               end
             elsif tokens.size == 3
             end
@@ -101,22 +102,31 @@ after_initialize do
       end
     end
 
-    def post_message(text)
+    # TODO put channel in PluginStore with followed cats/topics
+    def post_message(text, channel="G1APTF02F")
       unless !@ws
         EventMachine.next_tick do
           message = {
             "id" => 1,
             "type" => "message",
-            "channel" => "G1APTF02F",
+            "channel" => channel,
             "text" => text
           }
 
           @ws.send message.to_json
         end
       else
-        join_slack { post_message text }
+        join_slack { post_message text, channel }
       end
     end
+
+    # TODO Move commands here ? 
+    @@commands = {
+      "subscribe" => lambda {|a|
+        # TODO
+        p "Subscribed to #{a}"
+      }
+    }
   end
 
   require_dependency 'application_controller'
@@ -135,14 +145,13 @@ after_initialize do
   end
 
   DiscourseEvent.on(:post_created) do |post|
-    if instance.following?(post.topic_id, "topics")
+    if ::DiscourseSlack::Slack.following?(post.topic_id, "topics")
       instance.post_message("Post #{post.id} posted to tracked topic #{post.topic_id}")
     end
   end
 
   DiscourseEvent.on(:topic_created) do |topic|
-    instance.follow(4, 'categories')    
-    if instance.following?(topic.category_id, "categories")
+    if ::DiscourseSlack::Slack.following?(topic.category_id, "categories")
       instance.post_message("Topic #{topic.id} posted to tracked category #{topic.category_id}\n#{topic.url}")
     end
   end
