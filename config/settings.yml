@@ -1,0 +1,7 @@
+plugins:
+  slack_enabled:
+    default: true
+    client: true
+  bot_token:
+    default: your-bot-token-here
+    client: true
