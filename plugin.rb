@@ -16,7 +16,6 @@ require 'optparse'
 enabled_site_setting :slack_enabled
 
 PLUGIN_NAME = "discourse-slack-official".freeze
-P_FOLLOWING = "following_".freeze
 
 after_initialize do
   module ::DiscourseSlack
@@ -34,30 +33,32 @@ after_initialize do
       join_slack
     end
 
-    def self.follow(id, set)
-      f = load_set(set)
-      f.push(id)
-      f.uniq!
-
-      ::PluginStore.set(PLUGIN_NAME, P_FOLLOWING + set, f)
+    def self.follow(collection, id, channel)
+      data = store_get(collection, id)
+      data.push(channel)
+      store_set(collection, id, data)
     end
     
-    def self.unfollow(id, set)
-      f = load_set(set)
-      f.delete(id)
-      f.uniq!
-
-      ::PluginStore.set(PLUGIN_NAME, P_FOLLOWING + set, f)
+    def self.unfollow(collection, id, channel)
+      data = store_get(collection, id)
+      data.delete(channel)
+      store_set(collection, id, data)
     end
 
-    def self.following?(id, set)
-      f = load_set(set)
-      (f != nil && f.include?(id))
+    def self.following?(collection, id, channel)
+      d = store_get(collection, id)
+      # Either you're following that list *somewhere*, or a specific channel
+      (d != nil) && ((d.length > 0) || (channel != nil && d.include?(channel)))
     end
 
-    def self.load_set(set)
-      f = ::PluginStore.get(PLUGIN_NAME, P_FOLLOWING + set)
-      f || []
+    def self.store_get(collection, id)
+      d = ::PluginStore.get(PLUGIN_NAME, "following_#{collection}_#{id}")
+      d || []
+    end
+
+    def self.store_set(collection, id, data)
+      data.uniq!
+      ::PluginStore.set(PLUGIN_NAME, "following_#{collection}_#{id}", data)
     end
 
     def join_slack &block
@@ -76,34 +77,72 @@ after_initialize do
         end
 
         @ws.onmessage do |msg, type|
-          obj = JSON.parse(msg)
+          obj = JSON.parse(msg, {:symbolize_names => true})
           puts "Received message: #{msg.to_str}"
-          @@commands['subscribe'].call 'test'
 
-          if obj["type"].eql?("message") && obj["text"] && obj["text"].include?(@me["id"])
-            tokens = obj["text"].split(" ")
+          if obj[:type].eql?("message") && obj[:text] && obj[:text].include?(@me["id"])
+            tokens = obj[:text].split(" ")
             puts tokens
+
             if tokens.size == 4
-              cat = Category.find_by_slug(tokens[3])
-              if cat
-                self.class.follow(cat.id, 'categories')
-                post_message "Followed category #{cat.slug}", obj["channel"]
-              else
-                post_message "No such category", obj["channel"]
-              end
+              # Fix / flesh this out later
+              #cat = Category.find_by_slug(tokens[3])
+              #if cat
+              #  self.class.follow(cat.id, 'categories')
+              #end
             elsif tokens.size == 3
+              begin
+                uri = URI.parse tokens[2][1.. (tokens[2].length - 2)] # Strip out slack bracket thingies.
+                path = Rails.application.routes.recognize_path(uri.path.sub(Discourse.base_uri, ""))
+                puts path
+
+                follow_words = ['follow', 'f', 'subscribe', 'sub', 's', 'track', 't', 'add', 'a']
+                unfollow_words = ['unfollow', 'u', 'unsubscribe', 'unsub', 'untrack', 'remove', 'r']
+                
+                id = nil
+                collection = nil
+
+                case path[:controller]
+                when 'topics'
+                  # Find post.
+                  id = path[:topic_id]
+                  collection = 'topics'
+                when 'list'
+                  # Flatten to ID since controller gives whatever. Maybe a bit much. Might be a better way to do this. Ensures no dupes(?)
+                  # same as fetch_category. Maybe a security issue? Will filter by permission later.
+                  cat = Category.find_by(slug: path[:category]) || Category.find_by(id: path[:category].to_i)
+                  id = cat.id
+                  collection = 'categories'
+                end
+
+                if follow_words.include?(tokens[1])
+                  self.class.follow(collection, id, obj[:channel])
+                  post_message "Added #{id} to followed #{collection}", obj[:channel]
+                elsif unfollow_words.include?(tokens[1])
+                  self.class.unfollow(collection, id, obj[:channel])
+                  post_message "Removed #{id} from followed #{collection}", obj[:channel]
+                end
+
+              rescue URI::InvalidURIError
+                post_message "I'm sorry, <@#{obj[:user]}>, that's not a valid URL!", obj[:channel]
+              rescue Exception => e 
+                # TODO Move to rails logger
+                post_message "```\n" + e.message + "\n```", obj[:channel] 
+                post_message  "```\n"  + e.backtrace.inspect + "\n```", obj[:channel]
+                #post_message "Oopsies.", obj[:channel]
+       
+              end  
             end
           end
         end
 
         @ws.onclose do |code, reason|
-          puts "Disconnected with status code: #{code}\n #{reason}"
+          puts "Disconnected with status code: #{code}\n Message: #{reason}"
         end
       end
     end
 
-    # TODO put channel in PluginStore with followed cats/topics
-    def post_message(text, channel="G1APTF02F")
+    def post_message(text, channel)
       unless !@ws
         EventMachine.next_tick do
           message = {
@@ -119,14 +158,6 @@ after_initialize do
         join_slack { post_message text, channel }
       end
     end
-
-    # TODO Move commands here ? 
-    @@commands = {
-      "subscribe" => lambda {|a|
-        # TODO
-        p "Subscribed to #{a}"
-      }
-    }
   end
 
   require_dependency 'application_controller'
@@ -145,15 +176,16 @@ after_initialize do
   end
 
   DiscourseEvent.on(:post_created) do |post|
-    if ::DiscourseSlack::Slack.following?(post.topic_id, "topics")
-      instance.post_message("Post #{post.id} posted to tracked topic #{post.topic_id}")
+    ::DiscourseSlack::Slack.store_get("topics", post.topic_id).each do |channel|
+      instance.post_message "Post #{post.id} posted to tracked topic #{post.topic_id}", channel
     end
   end
 
   DiscourseEvent.on(:topic_created) do |topic|
-    if ::DiscourseSlack::Slack.following?(topic.category_id, "categories")
-      instance.post_message("Topic #{topic.id} posted to tracked category #{topic.category_id}\n#{topic.url}")
+    ::DiscourseSlack::Slack.store_get("categories", topic.category_id).each do |channel|
+      instance.post_message "Topic #{topic.id} posted to tracked category #{topic.category_id}\n#{topic.url}", channel
     end
   end
+
 
 end
