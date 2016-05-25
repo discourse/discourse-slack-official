@@ -177,7 +177,7 @@ after_initialize do
 
   DiscourseEvent.on(:post_created) do |post|
     ::DiscourseSlack::Slack.store_get("topics", post.topic_id).each do |channel|
-      instance.post_message post.url, channel
+      instance.post_message post.full_url, channel
     end
   end
 
