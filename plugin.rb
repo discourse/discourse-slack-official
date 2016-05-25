@@ -6,8 +6,8 @@
 
 gem "websocket", "1.2.3"
 gem "websocket-native", "1.0.0"
-gem 'websocket-eventmachine-base', '1.2.0'
-gem 'websocket-eventmachine-client', '1.1.0'
+gem "websocket-eventmachine-base", "1.2.0"
+gem "websocket-eventmachine-client", "1.1.0"
 
 require 'net/http'
 require 'json'
@@ -62,7 +62,7 @@ after_initialize do
     end
 
     def join_slack &block
-      url = 'https://slack.com/api/rtm.start?token=' + (SiteSetting.bot_token || 'null')
+      url = "https://slack.com/api/rtm.start?token=#{SiteSetting.bot_token}"
       uri = URI(url)
       response = JSON.parse( Net::HTTP.get(uri) )
 
@@ -103,16 +103,16 @@ after_initialize do
                 collection = nil
 
                 case path[:controller]
-                when 'topics'
+                when "topics"
                   # Find post.
                   id = path[:topic_id]
-                  collection = 'topics'
-                when 'list'
+                  collection = "topics"
+                when "list"
                   # Flatten to ID since controller gives whatever. Maybe a bit much. Might be a better way to do this. Ensures no dupes(?)
                   # same as fetch_category. Maybe a security issue? Will filter by permission later.
                   cat = Category.find_by(slug: path[:category]) || Category.find_by(id: path[:category].to_i)
                   id = cat.id
-                  collection = 'categories'
+                  collection = "categories"
                 end
 
                 if follow_words.include?(tokens[1])
@@ -177,13 +177,13 @@ after_initialize do
 
   DiscourseEvent.on(:post_created) do |post|
     ::DiscourseSlack::Slack.store_get("topics", post.topic_id).each do |channel|
-      instance.post_message "Post #{post.id} posted to tracked topic #{post.topic_id}", channel
+      instance.post_message post.url, channel
     end
   end
 
   DiscourseEvent.on(:topic_created) do |topic|
     ::DiscourseSlack::Slack.store_get("categories", topic.category_id).each do |channel|
-      instance.post_message "Topic #{topic.id} posted to tracked category #{topic.category_id}\n#{topic.url}", channel
+      instance.post_message topic.url, channel
     end
   end
 
