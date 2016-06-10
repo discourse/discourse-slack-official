@@ -1,7 +1,7 @@
 # name: discourse-slack-official
 # about: This is intended to be a feature-rich plugin for slack-discourse integration
 # version: 0.0.1
-# authors: Nick Sahler (nicksahler)
+# authors: Nick Sahler (nicksahler), Dave McClure (mcwumbly) for slack backdoor code.
 # url: https://github.com/nicksahler/discourse-slack-official
 
 gem "websocket", "1.2.3"
@@ -30,7 +30,9 @@ after_initialize do
     @me = nil
 
     def initialize
-      join_slack
+      if SiteSetting.slack_enabled
+        join_slack
+      end
     end
 
     def self.follow(collection, id, channel)
@@ -62,7 +64,7 @@ after_initialize do
     end
 
     def join_slack &block
-      url = "https://slack.com/api/rtm.start?token=#{SiteSetting.bot_token}"
+      url = "https://slack.com/api/rtm.start?token=#{SiteSetting.slack_bot_token}"
       uri = URI(url)
       response = JSON.parse( Net::HTTP.get(uri) )
 
@@ -169,9 +171,76 @@ after_initialize do
     requires_plugin PLUGIN_NAME
 
     before_filter :slack_enabled?
+    before_filter :slack_username_present?
+    before_filter :slack_token_valid?
 
     def slack_enabled?
       raise Discourse::NotFound unless SiteSetting.slack_enabled
+    end
+
+    def knock
+      route = topic_route params[:text]
+      post_number = route[:post_number] ? route[:post_number].to_i : 1
+
+      topic = find_topic(route[:topic_id], post_number)
+      post = find_post(topic, post_number)
+
+      render json: slack_message(topic, post)
+    end
+
+    def slack_token_valid?
+      raise Discourse::InvalidAccess.new unless SiteSetting.slack_webhook_token
+      raise Discourse::InvalidAccess.new unless SiteSetting.slack_webhook_token == params[:token]
+    end
+
+    def slack_username_present?
+      raise Discourse::InvalidAccess.new unless SiteSetting.slack_discourse_username
+    end
+
+    def topic_route(text)
+      url = text.slice(text.index("<") + 1, text.index(">") -1)
+      url.sub! Discourse.base_url, ''
+      route = Rails.application.routes.recognize_path(url)
+      raise Discourse::NotFound unless route[:controller] == 'topics' && route[:topic_id]
+      route
+    end
+
+    def find_post(topic, post_number)
+      topic.filtered_posts.select { |p| p.post_number == post_number}.first
+    end
+
+    def find_topic(topic_id, post_number)
+      user = User.find_by_username SiteSetting.slack_discourse_username
+      TopicView.new(topic_id, user, { post_number: post_number })
+    end
+
+    def slack_message(topic, post)
+      display_name = post.user.name
+      pretext = post.try(:is_first_post?) ? "topic by #{display_name}" : "reply by #{display_name}"
+      response = {
+        attachments: [
+          {
+            fallback: "#{topic.title} - #{pretext}",
+            author_name: display_name,
+            color: '#' + ColorScheme.hex_for_name('header_background'),
+            pretext: pretext,
+            title: topic.title,
+            title_link: post.full_url,
+            text: post.excerpt(400, text_entities: true, strip_links: true)
+          }
+        ]
+      }
+    end
+
+    # Access control methods
+    def handle_unverified_request
+    end
+
+    def api_key_valid?
+      true
+    end
+
+    def redirect_to_login_if_required
     end
   end
 
@@ -187,5 +256,19 @@ after_initialize do
     end
   end
 
+  DiscourseEvent.on(:site_setting_saved) do |site_setting|
+    Rails.logger.info "HUHWHAT #{site_setting.inspect}"
+    if SiteSetting.slack_enabled
+      Rails.logger.info "HUHWHAT Slack was enabled!"
+      instance.join_slack
+    end
+  end
 
+  DiscourseSlack::Engine.routes.draw do
+    post "/knock" => "slack/unfurl#knock"
+  end
+
+  Discourse::Application.routes.prepend do
+    mount ::DiscourseSlack::Engine, at: "/slack/unfurl"
+  end
 end
