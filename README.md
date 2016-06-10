@@ -10,7 +10,7 @@ hooks:
         cmd:
           - mkdir -p plugins
           - git clone https://github.com/discourse/docker_manager.git
-          - git clone https://github.com/discourse/discourse-spoiler-alert.git
+          - git clone https://github.com/nicksahler/discourse-slack-official.git
 ```
 
 (Add the plugin's `git clone` url just below `git clone https://github.com/discourse/docker_manager.git`)
@@ -21,9 +21,6 @@ hooks:
 cd /var/discourse
 ./launcher rebuild app
 ```
-
-That's it, you've successfully installed the [Discourse Spoiler Alert](https://github.com/discourse/discourse-spoiler-alert) plugin on your Discourse instance!
-
 
 ## Configuring thread and category following via discourse bot.
 
