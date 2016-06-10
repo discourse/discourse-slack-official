@@ -129,8 +129,8 @@ after_initialize do
                 post_message "I'm sorry, <@#{obj[:user]}>, that's not a valid URL!", obj[:channel]
               rescue Exception => e 
                 # TODO Move to rails logger
-                post_message "```\n" + e.message + "\n```", obj[:channel] 
-                post_message  "```\n"  + e.backtrace.inspect + "\n```", obj[:channel]
+                #post_message "```\n" + e.message + "\n```", obj[:channel] 
+                #post_message  "```\n"  + e.backtrace.inspect + "\n```", obj[:channel]
                 #post_message "Oopsies.", obj[:channel]
        
               end  
