@@ -257,9 +257,7 @@ after_initialize do
   end
 
   DiscourseEvent.on(:site_setting_saved) do |site_setting|
-    Rails.logger.info "HUHWHAT #{site_setting.inspect}"
     if SiteSetting.slack_enabled
-      Rails.logger.info "HUHWHAT Slack was enabled!"
       instance.join_slack
     end
   end
