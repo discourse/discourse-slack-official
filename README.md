@@ -41,5 +41,5 @@ Impending features:
 - [ ] User access control (restricting use to certain users, dealing with hidden posts)
 - [x] Subscribe by link
 - [x] Installation step-by-step [WIP]
-- [ ] Eventually fewer dependencies when Discourse moves to Rails 5 (if it does)
-- [ ] Move unfurl functionality to bot, for more compactness
+- [x] ~Eventually fewer dependencies when Discourse moves to Rails 5 (if it does)~
+- [x] Move unfurl functionality to bot, for more compactness
