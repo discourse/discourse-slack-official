@@ -1,6 +1,6 @@
 en:
   site_settings:
-    slack_bot_token: 'The token your bot will use to access slack'
     slack_enabled: 'Enable the discourse-slack-official plugin'
     slack_discourse_username: 'Name of user act as when fetching content'
-    slack_webhook_token: 'Token sent in the payload from the Slack outoing webhook'
+    slack_incoming_webhook_token: 'Token sent in the payload from the Slack outoing webhook'
+    slack_outbound_webhook_url: 'URL for outbound slack requests'

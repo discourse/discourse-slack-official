@@ -1,10 +1,8 @@
 plugins:
   slack_enabled:
     default: false
-    client: true
-  slack_bot_token:
-    default: your-bot-token-here
-    client: true
-  slack_webhook_token:
+  slack_incoming_webhook_token:
     default: replace-with-wehbook-token
+  slack_outbound_webhook_url:
+    default: your-url-here
   slack_discourse_username:
