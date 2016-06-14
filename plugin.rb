@@ -1,6 +1,6 @@
 # name: discourse-slack-official
 # about: This is intended to be a feature-rich plugin for slack-discourse integration
-# version: 1.0.1
+# version: 1.0.2
 # authors: Nick Sahler (nicksahler), Dave McClure (mcwumbly) for slack backdoor code.
 # url: https://github.com/nicksahler/discourse-slack-official
 
@@ -29,12 +29,6 @@ after_initialize do
     before_filter :slack_username_present?
     before_filter :slack_token_valid?
     before_filter :slack_outbound_webhook_url_present?
-
-    def initialize
-      DiscourseEvent.on(:post_created) do |post| 
-        notify(post)
-      end
-    end
 
     def slack_enabled?
       raise Discourse::NotFound unless SiteSetting.slack_enabled
@@ -70,10 +64,10 @@ after_initialize do
           end
 
           if follow_words.include?(tokens[0])
-            self.class.follow(collection, id, channel)
+            DiscourseSlack::Slack.follow(collection, id, channel)
             render json: { text: "Added *#{name}* to followed #{collection}" }
           elsif unfollow_words.include?(tokens[0])
-            self.class.unfollow(collection, id, channel)
+            DiscourseSlack::Slack.unfollow(collection, id, channel)
             render json: { text: "Removed *#{name}* from followed #{collection}" }
           end
 
@@ -92,7 +86,7 @@ after_initialize do
       topic = find_topic(route[:topic_id], post_number)
       post = find_post(topic, post_number)
 
-      render json: slack_message(post)
+      render json: Slack.slack_message(post)
     end
 
     def slack_token_valid?
@@ -125,7 +119,21 @@ after_initialize do
       TopicView.new(topic_id, user, { post_number: post_number })
     end
 
-    def slack_message(post, channel)
+
+    # Access control methods
+    def handle_unverified_request
+    end
+
+    def api_key_valid?
+      true
+    end
+
+    def redirect_to_login_if_required
+    end
+  end
+
+  class ::DiscourseSlack::Slack
+    def self.slack_message(post, channel)
       display_name = post.user.name || post.user.username
       topic = post.topic
 
@@ -170,40 +178,33 @@ after_initialize do
 
     def self.store_get(collection, id)
       d = ::PluginStore.get(PLUGIN_NAME, "following_#{collection}_#{id}")
-      d || []
+      (d || []).uniq
     end
 
     def self.store_set(collection, id, data)
-      data.uniq!
-      ::PluginStore.set(PLUGIN_NAME, "following_#{collection}_#{id}", data)
+      ::PluginStore.set(PLUGIN_NAME, "following_#{collection}_#{id}", data.uniq)
     end
 
-    def notify(post)
+    def self.notify(post)
       uri = URI(SiteSetting.slack_outbound_webhook_url)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
-      
-      channels = (post.is_first_post?) ? self.class.store_get("categories", post.topic.category_id) : self.class.store_get("topics", post.topic_id)
 
-      channels.each do |channel|
+      channels = (post.is_first_post?) ? store_get("categories", post.topic.category_id) : store_get("topics", post.topic_id)
+
+      channels.uniq.each do |channel|
         req = Net::HTTP::Post.new(uri, initheader = {'Content-Type' =>'application/json'})
         req.body = slack_message(post, channel).to_json
         res = http.request(req)
       end
     end
 
-    # Access control methods
-    def handle_unverified_request
-    end
-
-    def api_key_valid?
-      true
-    end
-
-    def redirect_to_login_if_required
-    end
   end
 
+  DiscourseEvent.on(:post_created) do |post|
+    DiscourseSlack::Slack.notify(post)
+  end
+    
   DiscourseSlack::Engine.routes.draw do
     post "/knock" => "slack#knock"
     post "/command" => "slack#command" 
