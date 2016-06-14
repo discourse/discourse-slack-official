@@ -182,8 +182,7 @@ after_initialize do
       uri = URI(SiteSetting.slack_outbound_webhook_url)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
-      http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-
+      
       channels = (post.is_first_post?) ? self.class.store_get("categories", post.topic.category_id) : self.class.store_get("topics", post.topic_id)
 
       channels.each do |channel|
