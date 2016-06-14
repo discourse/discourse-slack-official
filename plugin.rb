@@ -137,22 +137,46 @@ after_initialize do
       display_name = post.user.name || post.user.username
       topic = post.topic
 
-      pretext = post.try(:is_first_post?) ? "topic by #{display_name}" : "reply by #{display_name}"
+      pretext = post.try(:is_first_post?) ? "New topic by #{display_name} in #{topic.category.name}" : "New response by #{display_name}."
       response = {
         channel: channel,
         attachments: [
           {
             fallback: "#{topic.title} - #{pretext}",
-            author_name: display_name,
+            author_name: pretext,
             author_icon: post.user.small_avatar_url,
 
-            color: '#' + ColorScheme.hex_for_name('header_background'),
-            pretext: pretext,
+            color: '#' + topic.category.color,
+            #pretext: pretext,
 
             title: topic.title,
             title_link: post.full_url,
+            thumb_url: post.full_url,
 
-            text: post.excerpt(400, text_entities: true, strip_links: true)
+            text: post.excerpt(400, text_entities: true, strip_links: true),
+
+            fields: [
+              {
+                "title": "Likes",
+                "value": "#{post.like_count} \xF0\x9F\x92\x9A",
+                "short": true
+              },
+
+              {
+                "title": "Responses",
+                "value": "#{topic.posts_count} \xE2\x9C\x89",
+                "short": true
+              }
+              # {
+              #   "title": "Reading time",
+              #   "value": "#{TODO TopicView} mins \xF0\x9F\x95\x91",
+              #   "short": true
+              # }
+            ],
+
+            ts: post.topic.created_at.to_i,
+            footer: SiteSetting.title,
+            footer_icon: SiteSetting.favicon_url
           }
         ]
       }
