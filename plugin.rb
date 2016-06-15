@@ -156,17 +156,17 @@ after_initialize do
             text: post.excerpt(400, text_entities: true, strip_links: true),
 
             fields: [
-              {
-                "title": "Likes",
-                "value": "#{post.like_count} \xF0\x9F\x92\x9A",
-                "short": true
-              },
+              #{
+              #  "title": "Likes",
+              #  "value": "#{post.like_count} \xF0\x9F\x92\x9A",
+              #  "short": true
+              #},
 
-              {
-                "title": "Responses",
-                "value": "#{topic.posts_count} \xE2\x9C\x89",
-                "short": true
-              }
+              #{
+              #  "title": "Responses",
+              #  "value": "#{topic.posts_count} \xE2\x9C\x89",
+              #  "short": true
+              #}
               # {
               #   "title": "Reading time",
               #   "value": "#{TODO TopicView} mins \xF0\x9F\x95\x91",
