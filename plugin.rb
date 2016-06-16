@@ -74,7 +74,7 @@ after_initialize do
         rescue URI::InvalidURIError
           render json: { text: "I'm sorry, <@#{params[:user_id]}>, that's not a valid URL!" }
         rescue Exception => e 
-          render json: { text: "There was an error in discourse! Please contact your admin.\n #{e.message}\n\n #{e.backtrace.inspect}"}
+          render json: { text: "There was an error in discourse! Please contact your admin.\n ```#{e.message}\n\n #{e.backtrace.inspect}```"}
         end  
       end
     end
@@ -134,12 +134,16 @@ after_initialize do
 
   class ::DiscourseSlack::Slack
     def self.slack_message(post, channel)
-      display_name = post.user.name || post.user.username
+      display_name = (post.user.name.strip.empty?) ? post.user.username : post.user.name
       topic = post.topic
 
       pretext = post.try(:is_first_post?) ? "New topic by #{display_name} in #{topic.category.name}" : "New response by #{display_name}."
+      
       response = {
         channel: channel,
+        username: SiteSetting.title,
+        icon_url: SiteSetting.logo_small_url,
+
         attachments: [
           {
             fallback: "#{topic.title} - #{pretext}",
@@ -147,7 +151,6 @@ after_initialize do
             author_icon: post.user.small_avatar_url,
 
             color: '#' + topic.category.color,
-            #pretext: pretext,
 
             title: topic.title,
             title_link: post.full_url,
@@ -172,11 +175,11 @@ after_initialize do
               #   "value": "#{TODO TopicView} mins \xF0\x9F\x95\x91",
               #   "short": true
               # }
-            ],
+            ]
 
-            ts: post.topic.created_at.to_i,
-            footer: SiteSetting.title,
-            footer_icon: SiteSetting.favicon_url
+            #ts: post.topic.created_at.to_i,
+            #footer: SiteSetting.title,
+            #footer_icon: SiteSetting.favicon_url
           }
         ]
       }
