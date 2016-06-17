@@ -134,10 +134,10 @@ after_initialize do
 
   class ::DiscourseSlack::Slack
     def self.slack_message(post, channel)
-      display_name = (post.user.name.strip.empty?) ? post.user.username : post.user.name
+      display_name = (post.user.name.strip.empty?) ? post.user.username : "#{post.user.name} @#{post.user.username}"
       topic = post.topic
 
-      pretext = post.try(:is_first_post?) ? "New topic by #{display_name} in #{topic.category.name}" : "New response by #{display_name}."
+      pretext = post.try(:is_first_post?) ? "#{display_name} [#{topic.category.name}]" : display_name
       
       response = {
         channel: channel,
