@@ -137,8 +137,9 @@ after_initialize do
       display_name = (post.user.name.strip.empty?) ? post.user.username : "#{post.user.name} @#{post.user.username}"
       topic = post.topic
 
-      pretext = post.try(:is_first_post?) ? "#{display_name} [#{topic.category.name}]" : display_name
-      
+      #pretext = post.try(:is_first_post?) ? "#{display_name} [#{topic.category.name}]" : display_name
+      category = (topic.category.parent_category) ? "#{topic.category.parent_category.name}/#{topic.category.name}": "#{topic.category.name}"
+
       response = {
         channel: channel,
         username: SiteSetting.title,
@@ -146,13 +147,13 @@ after_initialize do
 
         attachments: [
           {
-            fallback: "#{topic.title} - #{pretext}",
-            author_name: pretext,
+            fallback: "#{topic.title} - #{display_name}",
+            author_name: display_name,
             author_icon: post.user.small_avatar_url,
 
             color: '#' + topic.category.color,
 
-            title: "#{topic.title} [#{(topic.tags.present?)? topic.tags.map {|tag| tag.name}.join(', ') : ''}]",
+            title: "#{topic.title} [#{category}] #{(topic.tags.present?)? topic.tags.map {|tag| tag.name}.join(', ') : ''}",
             title_link: post.full_url,
             thumb_url: post.full_url,
 
