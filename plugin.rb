@@ -152,7 +152,7 @@ after_initialize do
 
             color: '#' + topic.category.color,
 
-            title: topic.title,
+            title: "#{topic.title} [#{(topic.tags.present?)? topic.tags.map {|tag| tag.name}.join(', ') : ''}]",
             title_link: post.full_url,
             thumb_url: post.full_url,
 
