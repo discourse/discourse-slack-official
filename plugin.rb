@@ -134,7 +134,13 @@ after_initialize do
 
   class ::DiscourseSlack::Slack
     def self.slack_message(post, channel)
-      display_name = (post.user.name.strip.empty?) ? post.user.username : "#{post.user.name} @#{post.user.username}"
+      display_name = "@#{post.user.username}"
+      full_name = post.user.name || ""
+ 
+      if !(full_name.strip.empty?) && (full_name.strip.gsub(' ', '_').casecmp(post.user.username) != 0)
+        display_name = "#{full_name} @#{post.user.username}"
+      end
+      
       topic = post.topic
 
       #pretext = post.try(:is_first_post?) ? "#{display_name} [#{topic.category.name}]" : display_name
