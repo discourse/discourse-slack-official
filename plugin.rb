@@ -37,45 +37,62 @@ after_initialize do
     def command
       tokens = params[:text].split(" ")
       channel = params[:channel_id]
-      if tokens.size == 2
-        begin
-          uri = URI.parse tokens[1]
-          path = Rails.application.routes.recognize_path(uri.path.sub(Discourse.base_url, ""))
 
-          follow_words = ['follow', 'f', 'subscribe', 'sub', 's', 'track', 't', 'add', 'a']
-          unfollow_words = ['unfollow', 'u', 'unsubscribe', 'unsub', 'untrack', 'remove', 'r']
-          
-          id = nil
-          collection = nil
-          name = nil
+      follow_words = ['follow', 'f', 'subscribe', 'sub', 's', 'track', 't', 'add', 'a']
+      unfollow_words = ['unfollow', 'u', 'unsubscribe', 'unsub', 'untrack', 'remove', 'r']
+      list_words = ['list', 'show']
+      reset_words = ['destroy', 'reset']
 
-          case path[:controller]
-
-          when "topics"
-            topic = find_topic(path[:topic_id], 1)
-            id = path[:topic_id]
-            name = topic.title
-            collection = "topics"
-          when "list"
-            cat = Category.find_by(slug: path[:category]) || Category.find_by(id: path[:category].to_i)
-            id = cat.id
-            name = cat.name
-            collection = "categories"
+      if tokens.size == 1 && list_words.include?(tokens[0])
+        rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME)
+        text = ""
+        ## TODO just embed the object or a pretty name in pluginstore and deal with it 
+        rows.each do | row | 
+          if row.value.include? channel
+            text << row.key.gsub("following_categories_", "Category *").gsub("following_topics_", "Topic *") + "*\n"
           end
+        end
 
-          if follow_words.include?(tokens[0])
-            DiscourseSlack::Slack.follow(collection, id, channel)
-            render json: { text: "Added *#{name}* to followed #{collection}" }
-          elsif unfollow_words.include?(tokens[0])
-            DiscourseSlack::Slack.unfollow(collection, id, channel)
-            render json: { text: "Removed *#{name}* from followed #{collection}" }
+        render json: { text: "Subscribed for this channel: \n #{text}" }
+      elsif tokens.size == 2
+        id = nil
+        collection = nil
+        name = nil
+
+        if ((tokens[1].casecmp "all") == 0 )
+          id = "*"
+          name = "All Categories"
+          collection = "categories"
+        else
+          begin
+            uri = URI.parse tokens[1]
+            path = Rails.application.routes.recognize_path(uri.path.sub(Discourse.base_url, ""))
+
+            case path[:controller]
+            when "topics"
+              topic = find_topic(path[:topic_id], 1)
+              id = path[:topic_id]
+              name = topic.title
+              collection = "topics"
+            when "list"
+              cat = Category.find_by(slug: path[:category]) || Category.find_by(id: path[:category].to_i)
+              id = cat.id
+              name = cat.name
+              collection = "categories"
+            end
+          rescue Exception => e 
+            render json: { text: "I'm sorry, <@#{params[:user_id]}>, that's not a valid URL!" }
+            # render json: { text: "There was an error in discourse! Please contact your admin.\n `#{e.message}`"}
           end
+        end
 
-        rescue URI::InvalidURIError
-          render json: { text: "I'm sorry, <@#{params[:user_id]}>, that's not a valid URL!" }
-        rescue Exception => e 
-          render json: { text: "There was an error in discourse! Please contact your admin.\n ```#{e.message}\n\n #{e.backtrace.inspect}```"}
-        end  
+        if follow_words.include?(tokens[0])
+          DiscourseSlack::Slack.follow(collection, id, channel)
+          render json: { text: "Added *#{name}* to followed #{collection}" }
+        elsif unfollow_words.include?(tokens[0])
+          DiscourseSlack::Slack.unfollow(collection, id, channel)
+          render json: { text: "Removed *#{name}* from followed #{collection}" }
+        end
       end
     end
 
@@ -225,6 +242,7 @@ after_initialize do
       http.use_ssl = true
 
       channels = (post.is_first_post?) ? store_get("categories", post.topic.category_id) : store_get("topics", post.topic_id)
+      channels |= store_get("categories", "*") if (post.is_first_post?)
 
       channels.uniq.each do |channel|
         req = Net::HTTP::Post.new(uri, initheader = {'Content-Type' =>'application/json'})
