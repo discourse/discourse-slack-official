@@ -160,13 +160,15 @@ after_initialize do
       
       topic = post.topic
 
-      #pretext = post.try(:is_first_post?) ? "#{display_name} [#{topic.category.name}]" : display_name
       category = (topic.category.parent_category) ? "#{topic.category.parent_category.name}/#{topic.category.name}": "#{topic.category.name}"
+      
+      icon_url = URI(SiteSetting.logo_small_url) rescue nil # No icon URL if not valid
+      icon_url.host = Discourse.current_hostname if icon_url != nil
 
       response = {
         channel: channel,
         username: SiteSetting.title,
-        icon_url: SiteSetting.logo_small_url,
+        icon_url: icon_url,
 
         attachments: [
           {
