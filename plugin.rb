@@ -163,12 +163,13 @@ after_initialize do
       category = (topic.category.parent_category) ? "#{topic.category.parent_category.name}/#{topic.category.name}": "#{topic.category.name}"
       
       icon_url = URI(SiteSetting.logo_small_url) rescue nil # No icon URL if not valid
-      icon_url.host = Discourse.current_hostname if icon_url != nil
+      icon_url.host = Discourse.current_hostname if icon_url != nil && !(icon_url.host)
+      icon_url.scheme = (SiteSetting.use_https ? "https" : "http") if icon_url != nil && !(icon_url.scheme)
 
       response = {
         channel: channel,
         username: SiteSetting.title,
-        icon_url: icon_url,
+        icon_url: icon_url.to_s,
 
         attachments: [
           {
