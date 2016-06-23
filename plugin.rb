@@ -35,64 +35,34 @@ after_initialize do
     end
 
     def command
+      guardian = Guardian.new(User.find_by_username(SiteSetting.slack_discourse_username))
+
       tokens = params[:text].split(" ")
       channel = params[:channel_id]
+      cmd = "help"
 
-      follow_words = ['follow', 'f', 'subscribe', 'sub', 's', 'track', 't', 'add', 'a']
-      unfollow_words = ['unfollow', 'u', 'unsubscribe', 'unsub', 'untrack', 'remove', 'r']
-      list_words = ['list', 'show']
-      reset_words = ['destroy', 'reset']
+      if tokens.size > 0 && tokens.size < 3
+        cmd = tokens[0]
+      end
+      ## TODO Put back URL finding
+      case cmd
+      when "watch", "follow", "mute"
+        category = Category.find_by({slug: tokens[1]})
 
-      if tokens.size == 1 && list_words.include?(tokens[0])
-        rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME)
-        text = ""
-        ## TODO just embed the object or a pretty name in pluginstore and deal with it 
-        rows.each do | row | 
-          if row.value.include? channel
-            text << row.key.gsub("following_categories_", "Category *").gsub("following_topics_", "Topic *") + "*\n"
-          end
-        end
-
-        render json: { text: "Subscribed for this channel: \n #{text}" }
-      elsif tokens.size == 2
-        id = nil
-        collection = nil
-        name = nil
-
-        if ((tokens[1].casecmp "all") == 0 )
-          id = "*"
-          name = "All Categories"
-          collection = "categories"
+        #TODO Maybe put "all" in its own command
+        if (tokens[1].casecmp("all") === 0)
+          render json: { text: DiscourseSlack::Slack.set_filter_all(channel, cmd) }
+        elsif (category && guardian.can_see_category?(category))
+          render json: { text: DiscourseSlack::Slack.set_filter(category, channel, cmd) }
         else
-          begin
-            uri = URI.parse tokens[1]
-            path = Rails.application.routes.recognize_path(uri.path.sub(Discourse.base_url, ""))
-
-            case path[:controller]
-            when "topics"
-              topic = find_topic(path[:topic_id], 1)
-              id = path[:topic_id]
-              name = topic.title
-              collection = "topics"
-            when "list"
-              cat = Category.find_by(slug: path[:category]) || Category.find_by(id: path[:category].to_i)
-              id = cat.id
-              name = cat.name
-              collection = "categories"
-            end
-          rescue Exception => e 
-            render json: { text: "I'm sorry, <@#{params[:user_id]}>, that's not a valid URL!" }
-            # render json: { text: "There was an error in discourse! Please contact your admin.\n `#{e.message}`"}
-          end
+          render json: { text: "Category *#{tokens[1]}* not found" }
         end
-
-        if follow_words.include?(tokens[0])
-          DiscourseSlack::Slack.follow(collection, id, channel)
-          render json: { text: "Added *#{name}* to followed #{collection}" }
-        elsif unfollow_words.include?(tokens[0])
-          DiscourseSlack::Slack.unfollow(collection, id, channel)
-          render json: { text: "Removed *#{name}* from followed #{collection}" }
-        end
+      when "help"
+        render json: { text: (DiscourseSlack::Slack.help()) }
+      when "status"
+        render json: { text: (DiscourseSlack::Slack.status()) }
+      else
+        render json: { text: (DiscourseSlack::Slack.help()) }
       end
     end
 
@@ -103,7 +73,7 @@ after_initialize do
       topic = find_topic(route[:topic_id], post_number)
       post = find_post(topic, post_number)
 
-      render json: Slack.slack_message(post)
+      render json: DiscourseSlack::Slack.slack_message(post)
     end
 
     def slack_token_valid?
@@ -136,8 +106,7 @@ after_initialize do
       TopicView.new(topic_id, user, { post_number: post_number })
     end
 
-
-    # Access control methods
+    # ----- Access control methods -----
     def handle_unverified_request
     end
 
@@ -150,6 +119,45 @@ after_initialize do
   end
 
   class ::DiscourseSlack::Slack
+    # TODO Inefficient
+    def self.status()
+      rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME)
+      text = ""
+
+      categories = rows.map { |item| item.key.gsub('category_', '').to_i }
+
+      Category.where(id: categories).each do | category |
+        #why
+        get_store(category.id).each do |row|
+          unless row[:filter] === 'mute'
+            text << "<##{row[:channel]}> is #{row[:filter]}ing category *#{category.name}*\n"
+          end
+        end
+      end
+
+      get_store('*').each do |row|
+        unless row[:filter] === 'mute'
+          text << "<##{row[:channel]}> is #{row[:filter]}ing *all categories*\n"
+        end
+      end
+
+      text
+    end
+
+    def self.help()
+      #Redundant
+      cat_names = (CategoryList.new(Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)).categories.map { |category| category.slug }).join(', ')
+      response = %(
+      `/discourse [watch|follow|mute|help|status] [name]`
+If you are *watching*, slack will be notified of all new topics and their replies in the watched category.
+If you are *following*, slack will be notified of new topics in a category, and none of their replies.
+*Muting* a category will stop all notifications.\n
+*Status* will show currently watched and followed categories.
+You can follow these categories:
+#{cat_names}
+)
+    end
+
     def self.slack_message(post, channel)
       display_name = "@#{post.user.username}"
       full_name = post.user.name || ""
@@ -212,48 +220,58 @@ after_initialize do
       }
     end
 
-    def self.follow(collection, id, channel)
-      data = store_get(collection, id)
-      data.push(channel)
-      store_set(collection, id, data)
-    end
-    
-    def self.unfollow(collection, id, channel)
-      data = store_get(collection, id)
-      data.delete(channel)
-      store_set(collection, id, data)
+    # TODO Not very efficient 
+    def self.set_filter(category, channel, filter)
+      data = get_store(category.id)
+      update = data.index {|i| i['channel'] === channel}
+
+      if update
+        data[update]['filter'] = filter
+      else
+        data.push({ channel: channel, filter: filter })
+      end
+
+      ::PluginStore.set(PLUGIN_NAME, "category_#{category.id}", data)
+
+      response = "*#{filter.capitalize}ed* category *#{category.name}*"
     end
 
-    def self.following?(collection, id, channel)
-      d = store_get(collection, id)
-      # Either you're following that list *somewhere*, or a specific channel
-      (d != nil) && ((d.length > 0) || (channel != nil && d.include?(channel)))
+    def self.set_filter_all(channel, filter)
+      data = get_store('*')
+      update = data.index {|i| i['channel'] === channel}
+
+      if update
+        data[update]['filter'] = filter
+      else
+        data.push({ channel: channel, filter: filter })
+      end
+
+      ::PluginStore.set(PLUGIN_NAME, "category_*", data)
+
+      response = "*#{filter.capitalize}ed all categories* on this channel."
     end
 
-    def self.store_get(collection, id)
-      d = ::PluginStore.get(PLUGIN_NAME, "following_#{collection}_#{id}")
-      (d || []).uniq
-    end
-
-    def self.store_set(collection, id, data)
-      ::PluginStore.set(PLUGIN_NAME, "following_#{collection}_#{id}", data.uniq)
+    def self.get_store(id)
+      (::PluginStore.get(PLUGIN_NAME, "category_#{id}") || [])
     end
 
     def self.notify(post)
       uri = URI(SiteSetting.slack_outbound_webhook_url)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
+      
+      filter = proc { |i| (post.is_first_post?) ? (i['filter'] === 'watch' || i['filter'] === 'follow') : (i['filter'] === 'watch') }
+      items = []
 
-      channels = (post.is_first_post?) ? store_get("categories", post.topic.category_id) : store_get("topics", post.topic_id)
-      channels |= store_get("categories", "*") if (post.is_first_post?)
+      items |= get_store(post.topic.category_id).select(&filter)
+      items |= get_store("*").select(&filter)
 
-      channels.uniq.each do |channel|
+      (items.uniq { |i| i['channel'] } ).each do | i |
         req = Net::HTTP::Post.new(uri, initheader = {'Content-Type' =>'application/json'})
-        req.body = slack_message(post, channel).to_json
+        req.body = slack_message(post, i['channel']).to_json
         res = http.request(req)
       end
     end
-
   end
 
   DiscourseEvent.on(:post_created) do |post|
