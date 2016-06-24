@@ -191,7 +191,7 @@ You can follow these categories:
             title_link: post.full_url,
             thumb_url: post.full_url,
 
-            text: post.excerpt(400, text_entities: true, strip_links: true),
+            text: post.excerpt(SiteSetting.slack_discourse_excerpt_length, text_entities: true, strip_links: true),
 
             fields: [
               #{
@@ -256,6 +256,9 @@ You can follow these categories:
     end
 
     def self.notify(post)
+      # TODO Post other types and PMs later 
+      return if (post.archetype == Archetype.private_message || post.post_type != Post.types[:regular])
+
       uri = URI(SiteSetting.slack_outbound_webhook_url)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true

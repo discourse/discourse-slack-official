@@ -6,3 +6,6 @@ plugins:
   slack_outbound_webhook_url:
     default: your-url-here
   slack_discourse_username:
+    default: system
+  slack_discourse_excerpt_length:
+    default: 400
