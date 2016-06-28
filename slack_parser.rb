@@ -51,7 +51,8 @@ class SlackParser < Nokogiri::XML::SAX::Document
         end
       when "a"
         attributes = Hash[*attributes.flatten]
-        characters("<#{attributes['href']}|")
+        url = ::DiscourseSlack::Slack.absolute(attributes['href'])
+        characters("<#{url}|")
         @in_a = true
       when "aside"
         characters("\n> ", false, false, false)

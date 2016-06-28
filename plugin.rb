@@ -172,7 +172,7 @@ after_initialize do
       display_name = "@#{post.user.username}"
       full_name = post.user.name || ""
  
-      if !(full_name.strip.empty?) && (full_name.strip.gsub(' ', '_').casecmp(post.user.username) != 0)
+      if !(full_name.strip.empty?) && (full_name.strip.gsub(' ', '_').casecmp(post.user.username) != 0) && (full_name.strip.gsub(' ', '').casecmp(post.user.username) != 0)
         display_name = "#{full_name} @#{post.user.username}"
       end
       
@@ -180,9 +180,7 @@ after_initialize do
 
       category = (topic.category.parent_category) ? "[#{topic.category.parent_category.name}/#{topic.category.name}]": "[#{topic.category.name}]"
       
-      icon_url = URI(SiteSetting.logo_small_url) rescue nil # No icon URL if not valid
-      icon_url.host = Discourse.current_hostname if icon_url != nil && !(icon_url.host)
-      icon_url.scheme = (SiteSetting.use_https ? "https" : "http") if icon_url != nil && !(icon_url.scheme)
+      icon_url = absolute(SiteSetting.logo_small_url)
 
       response = {
         channel: channel,
@@ -206,6 +204,13 @@ after_initialize do
           }
         ]
       }
+    end
+
+    def self.absolute(raw)
+      url = URI(raw) rescue nil # No icon URL if not valid
+      url.host = Discourse.current_hostname if url != nil && !(url.host)
+      url.scheme = (SiteSetting.use_https ? "https" : "http") if url != nil && !(url.scheme)
+      url
     end
 
     # TODO Not very efficient 
