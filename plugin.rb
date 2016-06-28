@@ -55,7 +55,7 @@ after_initialize do
         elsif (category && guardian.can_see_category?(category))
           render json: { text: DiscourseSlack::Slack.set_filter(category, channel, cmd) }
         else
-          render json: { text: "Category *#{tokens[1]}* not found" }
+          render json: { text: "I can't find the *#{tokens[1]}* category. Did you mean: cat_list_here" }
         end
       when "help"
         render json: { text: (DiscourseSlack::Slack.help()) }
