@@ -41,9 +41,7 @@ class SlackParser < Nokogiri::XML::SAX::Document
         if attributes["class"] == 'emoji'
           return characters(attributes["alt"])
         end
-
-        characters("<#{attributes['src']}|", false, false, false)
-
+        
         if attributes["alt"]
           characters("#{attributes["alt"]}")
         elsif attributes["title"]
@@ -51,8 +49,6 @@ class SlackParser < Nokogiri::XML::SAX::Document
         else
           characters("#{I18n.t 'excerpt_image'}")
         end
-
-        characters(">", false, false, false)
       when "a"
         attributes = Hash[*attributes.flatten]
         characters("<#{attributes['href']}|")
