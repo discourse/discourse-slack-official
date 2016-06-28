@@ -203,28 +203,6 @@ after_initialize do
 
             text: ::DiscourseSlack::Slack.excerpt(post.cooked, SiteSetting.slack_discourse_excerpt_length),
             mrkdwn_in: ["text"]
-            fields: [
-              #{
-              #  "title": "Likes",
-              #  "value": "#{post.like_count} \xF0\x9F\x92\x9A",
-              #  "short": true
-              #},
-
-              #{
-              #  "title": "Responses",
-              #  "value": "#{topic.posts_count} \xE2\x9C\x89",
-              #  "short": true
-              #}
-              # {
-              #   "title": "Reading time",
-              #   "value": "#{TODO TopicView} mins \xF0\x9F\x95\x91",
-              #   "short": true
-              # }
-            ]
-
-            #ts: post.topic.created_at.to_i,
-            #footer: SiteSetting.title,
-            #footer_icon: SiteSetting.favicon_url
           }
         ]
       }
