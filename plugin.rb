@@ -21,6 +21,7 @@ after_initialize do
 
   require_dependency 'application_controller'
   require_dependency 'discourse_event'
+  require_relative 'slack_parser'
 
   class ::DiscourseSlack::SlackController < ::ApplicationController
     requires_plugin PLUGIN_NAME
@@ -124,7 +125,14 @@ after_initialize do
   end
 
   class ::DiscourseSlack::Slack
-    # TODO Inefficient
+    def self.excerpt(html, max_length) 
+      doc = Nokogiri::HTML.fragment(html)
+      doc.css(".lightbox-wrapper .meta").remove
+      html = doc.to_html
+
+      SlackParser.get_excerpt(html, max_length)
+    end
+
     def self.status()
       rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME)
       text = ""
@@ -193,7 +201,7 @@ after_initialize do
             title_link: post.full_url,
             thumb_url: post.full_url,
 
-            text: post.excerpt(SiteSetting.slack_discourse_excerpt_length, text_entities: true, strip_links: true),
+            text: ::DiscourseSlack::Slack.excerpt(post.cooked, SiteSetting.slack_discourse_excerpt_length),
 
             fields: [
               #{
