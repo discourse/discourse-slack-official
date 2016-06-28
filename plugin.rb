@@ -1,6 +1,6 @@
 # name: discourse-slack-official
 # about: This is intended to be a feature-rich plugin for slack-discourse integration
-# version: 2.0.2
+# version: 2.2.2
 # authors: Nick Sahler (nicksahler), Dave McClure (mcwumbly) for slack backdoor code.
 # url: https://github.com/nicksahler/discourse-slack-official
 
@@ -55,6 +55,7 @@ after_initialize do
           elsif (category && guardian.can_see_category?(category))
             render json: { text: DiscourseSlack::Slack.set_filter(category, channel, cmd) }
           else
+            # TODO DRY (easy)
             cat_list = (CategoryList.new(Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)).categories.map { |category| category.slug }).join(', ')
             render json: { text: "I can't find the *#{tokens[1]}* category. Did you mean: #{cat_list}" }
           end
@@ -144,7 +145,8 @@ after_initialize do
           text << "<##{row[:channel]}> is #{row[:filter]}ing *all categories*\n"
         end
       end
-
+      cat_list = (CategoryList.new(Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)).categories.map { |category| category.slug }).join(', ')
+      text << "\nHere are your available categories: #{cat_list}"
       text
     end
 
