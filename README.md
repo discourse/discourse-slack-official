@@ -24,11 +24,14 @@ cd /var/discourse
 
 ## Configuring thread and category following via discourse bot.
 
-1. Go to https://discourse.slack.com/apps/build/custom-integration and click **bots** to create a new bot.
-
-2. Give your bot a name, this is how you will call it later on.
-
-3. Copy your API token into discourse-slack's `bot token` setting.
+1. Go to https://<yourslack>.slack.com/apps/build/custom-integration and click **Slash Commands ** to create a new outgoing command. **In the case that you have more than one Discourse forum one of these is needed for each install**
+2. Enter the command you wish to use. If you only have one forum, `/discourse` will work fine. This is how you will interact with your forum later on.
+3. Set a URL for the slash command to post to. It should be `<your-discourse-url-here>/slack/command`
+3. Copy your API token into discourse-slack's `slack incoming webhook token` setting found at `<your-discourse-url-here>/admin/site_settings/category/plugins`
+4. Go to https://<yourslack>.slack.com/apps/build/custom-integration and click **Incoming WebHooks** to create a new webhook. Discourse will use this to post to slack. **You only need to do this once for more than one Discourse instance**
+5. Copy your webhook URL token into discourse-slack's `slack outbound webhook url` setting.
+6. If you would like, set a default user for slack to use and the size of the excerpts being posted to slack
+7. Enable slack in your settings.
 
 ## Enabling URL unfurling on private forums 
 
