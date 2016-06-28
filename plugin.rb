@@ -47,15 +47,17 @@ after_initialize do
       ## TODO Put back URL finding
       case cmd
       when "watch", "follow", "mute"
-        category = Category.find_by({slug: tokens[1]})
-
-        #TODO Maybe put "all" in its own command
-        if (tokens[1].casecmp("all") === 0)
-          render json: { text: DiscourseSlack::Slack.set_filter_all(channel, cmd) }
-        elsif (category && guardian.can_see_category?(category))
-          render json: { text: DiscourseSlack::Slack.set_filter(category, channel, cmd) }
+        if (tokens.size == 2)
+          category = Category.find_by({slug: tokens[1]})
+          if (tokens[1].casecmp("all") === 0)
+            render json: { text: DiscourseSlack::Slack.set_filter_all(channel, cmd) }
+          elsif (category && guardian.can_see_category?(category))
+            render json: { text: DiscourseSlack::Slack.set_filter(category, channel, cmd) }
+          else
+            render json: { text: "I can't find the *#{tokens[1]}* category. Did you mean: cat_list_here" }
+          end
         else
-          render json: { text: "I can't find the *#{tokens[1]}* category. Did you mean: cat_list_here" }
+          render json: { text: (DiscourseSlack::Slack.help()) }
         end
       when "help"
         render json: { text: (DiscourseSlack::Slack.help()) }
