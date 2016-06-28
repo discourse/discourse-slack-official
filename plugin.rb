@@ -166,7 +166,7 @@ after_initialize do
       
       topic = post.topic
 
-      category = (topic.category.parent_category) ? "#{topic.category.parent_category.name}/#{topic.category.name}": "#{topic.category.name}"
+      category = (topic.category.parent_category) ? "[#{topic.category.parent_category.name}/#{topic.category.name}]": "[#{topic.category.name}]"
       
       icon_url = URI(SiteSetting.logo_small_url) rescue nil # No icon URL if not valid
       icon_url.host = Discourse.current_hostname if icon_url != nil && !(icon_url.host)
@@ -185,7 +185,7 @@ after_initialize do
 
             color: '#' + topic.category.color,
 
-            title: "#{topic.title} [#{category}] #{(topic.tags.present?)? topic.tags.map {|tag| tag.name}.join(', ') : ''}",
+            title: "#{topic.title} #{(category === '[uncategorized]')? '' : category} #{(topic.tags.present?)? topic.tags.map {|tag| tag.name}.join(', ') : ''}",
             title_link: post.full_url,
             thumb_url: post.full_url,
 
