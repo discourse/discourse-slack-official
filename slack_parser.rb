@@ -41,7 +41,7 @@ class SlackParser < Nokogiri::XML::SAX::Document
         if attributes["class"] == 'emoji'
           return characters(attributes["alt"])
         end
-        
+
         if attributes["alt"]
           characters("#{attributes["alt"]}")
         elsif attributes["title"]
@@ -75,8 +75,10 @@ class SlackParser < Nokogiri::XML::SAX::Document
     when "a"
       characters(">",false, false, false)
       @in_a = false
-    when "p", "br"
+    when "br"
       characters(" ", false, false, false)
+    when "p",
+      characters("", false, false, false)
     when "aside"
       characters("\n\n", false, false, false)
       @in_quote = false
@@ -87,7 +89,6 @@ class SlackParser < Nokogiri::XML::SAX::Document
   end
 
   def characters(string, truncate = true, count_it = true, encode = true)
-    return if @in_quote
     encode = encode ? lambda{|s| ERB::Util.html_escape(s)} : lambda {|s| s}
     if count_it && @current_length + string.length > @length
       length = [0, @length - @current_length - 1].max

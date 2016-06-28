@@ -202,7 +202,7 @@ after_initialize do
             thumb_url: post.full_url,
 
             text: ::DiscourseSlack::Slack.excerpt(post.cooked, SiteSetting.slack_discourse_excerpt_length),
-
+            mrkdwn_in: ["text"]
             fields: [
               #{
               #  "title": "Likes",
