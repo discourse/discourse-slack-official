@@ -145,16 +145,12 @@ after_initialize do
     end
 
     def self.help()
-      #Redundant
-      cat_names = (CategoryList.new(Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)).categories.map { |category| category.slug }).join(', ')
       response = %(
-      `/discourse [watch|follow|mute|help|status] [name]`
-If you are *watching*, slack will be notified of all new topics and their replies in the watched category.
-If you are *following*, slack will be notified of new topics in a category, and none of their replies.
-*Muting* a category will stop all notifications.\n
-*Status* will show currently watched and followed categories.
-You can follow these categories:
-#{cat_names}
+      `/discourse [watch|follow|mute|help|status] [category|all]`
+*watch* – notify this channel for new topics and new replies
+*follow* – notify this channel for new topics
+*mute* – stop notifying this channel
+*status* – show current notification state and categories
 )
     end
 
