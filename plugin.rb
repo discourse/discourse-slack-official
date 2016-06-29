@@ -19,8 +19,10 @@ after_initialize do
     end
   end
 
+  require_dependency File.expand_path('../jobs/notify_slack.rb', __FILE__)
   require_dependency 'application_controller'
   require_dependency 'discourse_event'
+
   require_relative 'slack_parser'
 
   class ::DiscourseSlack::SlackController < ::ApplicationController
@@ -252,9 +254,11 @@ after_initialize do
       (::PluginStore.get(PLUGIN_NAME, "category_#{id}") || [])
     end
 
-    def self.notify(post)
-      # TODO Post other types and PMs later 
-      return if (post.archetype == Archetype.private_message || post.post_type != Post.types[:regular])
+    # TODO Post other types and PMs later 
+    def self.notify(id)
+      post = Post.find_by({id: id})
+
+      return if !(post) || (post.archetype == Archetype.private_message || post.post_type != Post.types[:regular])
 
       uri = URI(SiteSetting.slack_outbound_webhook_url)
       http = Net::HTTP.new(uri.host, uri.port)
@@ -277,7 +281,7 @@ after_initialize do
   end
 
   DiscourseEvent.on(:post_created) do |post|
-    DiscourseSlack::Slack.notify(post)
+    Jobs.enqueue(:notify_slack, post: post[:id])
   end
     
   DiscourseSlack::Engine.routes.draw do
