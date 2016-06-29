@@ -125,6 +125,14 @@ after_initialize do
   end
 
   class ::DiscourseSlack::Slack
+    def self.filter_to_present(filter)
+      { 'mute' => 'muting', 'follow' => 'following', 'watch' => 'watching' }[filter]
+    end
+
+    def self.filter_to_past(filter)
+      { 'mute' => 'muted', 'follow' => 'followed', 'watch' => 'watched' }[filter]
+    end
+
     def self.excerpt(html, max_length) 
       doc = Nokogiri::HTML.fragment(html)
       doc.css(".lightbox-wrapper .meta").remove
@@ -142,16 +150,12 @@ after_initialize do
       Category.where(id: categories).each do | category |
         #why
         get_store(category.id).each do |row|
-          unless row[:filter] === 'mute'
-            text << "<##{row[:channel]}> is #{row[:filter]}ing category *#{category.name}*\n"
-          end
+          text << "<##{row[:channel]}> is #{filter_to_present(row[:filter])} category *#{category.name}*\n"
         end
       end
 
       get_store('*').each do |row|
-        unless row[:filter] === 'mute'
-          text << "<##{row[:channel]}> is #{row[:filter]}ing *all categories*\n"
-        end
+        text << "<##{row[:channel]}> is #{filter_to_present(row[:filter])} *all categories*\n"
       end
       cat_list = (CategoryList.new(Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)).categories.map { |category| category.slug }).join(', ')
       text << "\nHere are your available categories: #{cat_list}"
@@ -226,7 +230,7 @@ after_initialize do
 
       ::PluginStore.set(PLUGIN_NAME, "category_#{category.id}", data)
 
-      response = "*#{filter.capitalize}ed* category *#{category.name}*"
+      response = "*#{filter_to_past(filter).capitalize}* category *#{category.name}*"
     end
 
     def self.set_filter_all(channel, filter)
@@ -241,7 +245,7 @@ after_initialize do
 
       ::PluginStore.set(PLUGIN_NAME, "category_*", data)
 
-      response = "*#{filter.capitalize}ed all categories* on this channel."
+      response = "*#{filter_to_past(filter).capitalize} all categories* on this channel."
     end
 
     def self.get_store(id)
@@ -255,16 +259,18 @@ after_initialize do
       uri = URI(SiteSetting.slack_outbound_webhook_url)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
-      
-      filter = proc { |i| (post.is_first_post?) ? (i['filter'] === 'watch' || i['filter'] === 'follow') : (i['filter'] === 'watch') }
-      items = []
 
-      items |= get_store(post.topic.category_id).select(&filter)
-      items |= get_store("*").select(&filter)
+      precedence = { 'mute' => 0, 'watch' => 1, 'follow' => 1 }
 
-      (items.uniq { |i| i['channel'] } ).each do | i |
+      uniq_func = proc { |i| i['channel'] } 
+      sort_func = proc { |a, b| precedence[a] <=> precedence[b] }
+
+      items = get_store(post.topic.category_id) | get_store("*")
+
+      items.sort_by(&sort_func).uniq(&uniq_func).each do | i |
+        next if (i[:filter] === 'mute') || (( post.is_first_post? && i[:filter] != 'follow' ) && (i[:filter] != 'watch'))
         req = Net::HTTP::Post.new(uri, initheader = {'Content-Type' =>'application/json'})
-        req.body = slack_message(post, i['channel']).to_json
+        req.body = slack_message(post, i[:channel]).to_json
         res = http.request(req)
       end
     end
