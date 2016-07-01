@@ -215,7 +215,7 @@ after_initialize do
     def self.absolute(raw)
       url = URI(raw) rescue nil # No icon URL if not valid
       url.host = Discourse.current_hostname if url != nil && !(url.host)
-      url.scheme = (SiteSetting.use_https ? "https" : "http") if url != nil && !(url.scheme)
+      url.scheme = (SiteSetting.force_https ? "https" : "http") if url != nil && !(url.scheme)
       url
     end
 
