@@ -24,14 +24,23 @@ cd /var/discourse
 
 ## Configuring thread and category following via discourse bot.
 
-1. Go to `https://<yourslack>.slack.com/apps/build/custom-integration` and click **Slash Commands** to create a new outgoing command. **In the case that you have more than one Discourse forum one of these is needed for each install**
-2. Enter the command you wish to use. If you only have one forum, `/discourse` will work fine. This is how you will interact with your forum later on.
+1. Go to `https://<yourteam>.slack.com/apps/new/A0F82E8CA-slash-commands` to create a new outgoing command.\*
+2. Enter the command you wish to use. If you only have one forum, `/discourse` will work fine. Click "Add Slash Command Integration".
+![Step 11](https://cloud.githubusercontent.com/assets/1386403/16739197/f925f9f6-4766-11e6-92a7-8ea7897e7150.png)  
 3. Set a URL for the slash command to post to. It should be `<your-discourse-url-here>/slack/command`
-3. Copy your API token into discourse-slack's `slack incoming webhook token` setting found at `<your-discourse-url-here>/admin/site_settings/category/plugins`
-4. Go to https://<yourslack>.slack.com/apps/build/custom-integration and click **Incoming WebHooks** to create a new webhook. Discourse will use this to post to slack. **You only need to do this once for more than one Discourse instance**
-5. Copy your webhook URL token into discourse-slack's `slack outbound webhook url` setting.
-6. If you would like, set a default user for slack to use and the size of the excerpts being posted to slack
-7. Enable slack in your settings.
+4. Copy your API token from the Token field.  
+![Slash Command](https://cloud.githubusercontent.com/assets/1386403/16739196/f922ce2a-4766-11e6-87ae-9f67bb879e58.png)  
+4. Go to your discourse install's settings page found at `<your-discourse-url-here>/admin/site_settings/category/plugins` and filter by "slack". Paste your API token in the incoming webook field. The next steps will describe how to get the `webhook url` setting.  
+![Settings Page](https://cloud.githubusercontent.com/assets/1386403/16739200/f92dbee8-4766-11e6-9e4a-03289337a91b.png)
+5. Go to https://<yourslack>https://discourse.slack.com/apps/new/A0F7XDUAZ-incoming-webhooks` to create a new webhook. Discourse will use this to post to slack.\*\*  
+![3](https://cloud.githubusercontent.com/assets/1386403/16739198/f92c6b60-4766-11e6-99b2-877a370f67b5.png)
+6. Return to your settings page and paste your webhook URL token into the `slack outbound webhook url` setting.
+7. Click enable slack in your settings and save.
+
+Optionally, you can set a default user for slack to use and the size of the excerpts being posted to slack
+
+\* **If you have more than one Discourse forum, setps 1 and 2 must be repeated for each install with a different slash command for each**
+\*\* **You only need to do this once for more than one Discourse instance**
 
 ## Enabling URL unfurling on private forums 
 
