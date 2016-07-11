@@ -39,7 +39,7 @@ cd /var/discourse
 
 Optionally, you can set a default user for slack to use and the size of the excerpts being posted to slack
 
-\* **If you have more than one Discourse forum, setps 1 and 2 must be repeated for each install with a different slash command for each**
+\* **If you have more than one Discourse forum, setps 1 and 2 must be repeated for each install with a different slash command for each**  
 \*\* **You only need to do this once for more than one Discourse instance**
 
 ## Enabling URL unfurling on private forums 
