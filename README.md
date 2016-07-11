@@ -26,10 +26,10 @@ cd /var/discourse
 
 1. Go to `https://<yourteam>.slack.com/apps/new/A0F82E8CA-slash-commands` to create a new outgoing command.\*
 2. Enter the name of the command and click "Add Slash Command Integration".
-![Step 11](https://cloud.githubusercontent.com/assets/1386403/16739197/f925f9f6-4766-11e6-92a7-8ea7897e7150.png)  
+![New Slash Command](https://cloud.githubusercontent.com/assets/1386403/16739197/f925f9f6-4766-11e6-92a7-8ea7897e7150.png)  
 3. Set a URL for the slash command to post to. It should be `<your-discourse-url-here>/slack/command`
 4. Copy your API token from the Token field.  
-![Slash Command](https://cloud.githubusercontent.com/assets/1386403/16739196/f922ce2a-4766-11e6-87ae-9f67bb879e58.png)  
+![Add slash command](https://cloud.githubusercontent.com/assets/1386403/16739199/f92d42ec-4766-11e6-9ea5-131d5625db2e.png)
 4. Go to your discourse install's settings page found at `<your-discourse-url-here>/admin/site_settings/category/plugins` and filter by "slack". Paste your API token in the incoming webook field. The next steps will describe how to get the `webhook url` setting.  
 ![Settings Page](https://cloud.githubusercontent.com/assets/1386403/16739198/f92c6b60-4766-11e6-99b2-877a370f67b5.png)  
 5. Go to https://<yourslack>https://discourse.slack.com/apps/new/A0F7XDUAZ-incoming-webhooks` to create a new webhook. Discourse will use this to post to slack.\*\*  
