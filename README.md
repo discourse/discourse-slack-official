@@ -32,7 +32,7 @@ cd /var/discourse
 ![Add slash command](https://cloud.githubusercontent.com/assets/1386403/16739199/f92d42ec-4766-11e6-9ea5-131d5625db2e.png)
 4. Go to your discourse install's settings page found at `<your-discourse-url-here>/admin/site_settings/category/plugins` and filter by "slack". Paste your API token in the incoming webook field. The next steps will describe how to get the `webhook url` setting.  
 ![Settings Page](https://cloud.githubusercontent.com/assets/1386403/16739198/f92c6b60-4766-11e6-99b2-877a370f67b5.png)  
-5. Go to https://<yourslack>https://discourse.slack.com/apps/new/A0F7XDUAZ-incoming-webhooks` to create a new webhook. Discourse will use this to post to slack.\*\*  
+5. Go to `https://<yourslack>.slack.com/apps/new/A0F7XDUAZ-incoming-webhooks` to create a new webhook. Discourse will use this to post to slack.\*\*  
 ![New Webhook Page](https://cloud.githubusercontent.com/assets/1386403/16739200/f92dbee8-4766-11e6-9e4a-03289337a91b.png)
 6. Return to your settings page and paste your webhook URL token into the `slack outbound webhook url` setting.
 7. Click enable slack in your settings and save.
