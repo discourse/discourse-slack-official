@@ -1,6 +1,6 @@
 ## Installation
 
-* Add the this repository's `git clone` url to your container's `app.yml` file:
+Add the this repository's `git clone` url to your container's `app.yml` file:
 
 ```yml
 hooks:
@@ -13,12 +13,13 @@ hooks:
           - git clone https://github.com/nicksahler/discourse-slack-official.git
 ```
 
-(Add the plugin's `git clone` url just below `git clone https://github.com/discourse/docker_manager.git`)
+(Add the plugin's `git clone` url at the bottom.)
 
-* Rebuild the container:
+Rebuild your container:
 
 ```
 cd /var/discourse
+git pull
 ./launcher rebuild app
 ```
 
