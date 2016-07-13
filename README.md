@@ -22,7 +22,7 @@ cd /var/discourse
 ./launcher rebuild app
 ```
 
-## Configuring thread and category following via discourse bot.
+## Configuration
 
 1. Go to `https://<yourteam>.slack.com/apps/new/A0F82E8CA-slash-commands` to create a new outgoing command.\*
 
@@ -51,10 +51,9 @@ Optionally, you can set a default user for slack to use and the size of the exce
 
 ## Enabling URL unfurling on private forums 
 
-COMING SOON
+This is coming soon!
 
-
-Impending features:
+Todo:
 - [x] Post subscription foundation
 - [x] More robust command parsing 
 - [ ] User access control (restricting use to certain users, dealing with hidden posts)
