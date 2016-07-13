@@ -50,15 +50,9 @@ cd /var/discourse
 
 Optionally, you can set a default user for slack to use and the size of the excerpts being posted to slack
 
-<small><sup>\*</sup> If you have more than one Discourse, repeat steps 1 and 2 with a unique slash command</small>  
-<small><sup>\*\*</sup> You only need to do this once for more than one Discourse instance</small>  
+<sup>\*</sup> If you have more than one Discourse, repeat steps 1 and 2 with a unique slash command
+<sup>\*\*</sup> You only need to do this once for more than one Discourse instance
 
 Todo:
-- [x] Post subscription foundation
-- [x] More robust command parsing 
 - [ ] Enable unfurling on private Discourse instances
 - [ ] User access control (restricting use to certain users, dealing with hidden posts)
-- [x] Subscribe by link
-- [x] Installation step-by-step [WIP]
-- [x] ~Eventually fewer dependencies when Discourse moves to Rails 5 (if it does)~
-- [x] Move unfurl functionality to bot, for more compactness
