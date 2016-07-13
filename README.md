@@ -49,8 +49,8 @@ git pull
 
 Optionally, you can set a default user for slack to use and the size of the excerpts being posted to slack
 
-<sup>\*</sup> If you have more than one Discourse, repeat steps 1 and 2 with a unique slash command
-<sup>\*\*</sup> You only need to do this once for more than one Discourse instance
+<sup>\*</sup> If you have more than one Discourse, repeat steps 1 and 2 with a unique slash command  
+<sup>\*\*</sup> You only need to do this once for more than one Discourse instance  
 
 ## Todo
 
