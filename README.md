@@ -53,6 +53,7 @@ Optionally, you can set a default user for slack to use and the size of the exce
 <sup>\*</sup> If you have more than one Discourse, repeat steps 1 and 2 with a unique slash command
 <sup>\*\*</sup> You only need to do this once for more than one Discourse instance
 
-Todo:
+## Todo
+
 - [ ] Enable unfurling on private Discourse instances
 - [ ] User access control (restricting use to certain users, dealing with hidden posts)
