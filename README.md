@@ -38,6 +38,8 @@ git pull
 5. Go to your discourse install's settings page found at `<your-discourse-url-here>/admin/site_settings/category/plugins` and filter by "slack". Paste your API token in the incoming webook field. The next steps will describe how to get the `webhook url` setting.  
 
     ![Settings Page](https://cloud.githubusercontent.com/assets/1386403/16739198/f92c6b60-4766-11e6-99b2-877a370f67b5.png)  
+    
+    (You can also optionally set a default user for slack to use and the size of the excerpts being posted)
 
 6. Go to `https://<yourslack>.slack.com/apps/new/A0F7XDUAZ-incoming-webhooks` to create a new webhook. Discourse will use this to post to slack.\*\*  
 
@@ -46,8 +48,6 @@ git pull
 7. Return to your settings page and paste your webhook URL token into the `slack outbound webhook url` setting.
 
 8. Click enable slack in your settings and save.
-
-Optionally, you can set a default user for slack to use and the size of the excerpts being posted to slack
 
 <sup>\*</sup> If you have more than one Discourse, repeat steps 1 and 2 with a unique slash command  
 <sup>\*\*</sup> You only need to do this once for more than one Discourse instance  
