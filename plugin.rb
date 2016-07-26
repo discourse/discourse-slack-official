@@ -34,7 +34,7 @@ after_initialize do
     before_filter :slack_outbound_webhook_url_present?
 
     def slack_enabled?
-      raise Discourse::NotFound unless SiteSetting.slack_enabled
+      raise Discourse::NotFound unless SiteSetting.slack_enabled?
     end
 
     def command
@@ -59,18 +59,18 @@ after_initialize do
             render json: { text: DiscourseSlack::Slack.set_filter(category, channel, cmd) }
           else
             # TODO DRY (easy)
-            cat_list = (CategoryList.new(Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)).categories.map { |category| category.slug }).join(', ')
+            cat_list = (CategoryList.new(Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)).categories.map { |c| c.slug }).join(', ')
             render json: { text: "I can't find the *#{tokens[1]}* category. Did you mean: #{cat_list}" }
           end
         else
-          render json: { text: (DiscourseSlack::Slack.help()) }
+          render json: { text: DiscourseSlack::Slack.help }
         end
       when "help"
-        render json: { text: (DiscourseSlack::Slack.help()) }
+        render json: { text: DiscourseSlack::Slack.help }
       when "status"
-        render json: { text: (DiscourseSlack::Slack.status()) }
+        render json: { text: DiscourseSlack::Slack.status }
       else
-        render json: { text: (DiscourseSlack::Slack.help()) }
+        render json: { text: DiscourseSlack::Slack.help }
       end
     end
 
@@ -143,7 +143,7 @@ after_initialize do
       SlackParser.get_excerpt(html, max_length)
     end
 
-    def self.status()
+    def self.status
       rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME)
       text = ""
 
@@ -164,8 +164,8 @@ after_initialize do
       text
     end
 
-    def self.help()
-      response = %(
+    def self.help
+      %(
       `/discourse [watch|follow|mute|help|status] [category|all]`
 *watch* – notify this channel for new topics and new replies
 *follow* – notify this channel for new topics
@@ -177,18 +177,18 @@ after_initialize do
     def self.slack_message(post, channel)
       display_name = "@#{post.user.username}"
       full_name = post.user.name || ""
- 
+
       if !(full_name.strip.empty?) && (full_name.strip.gsub(' ', '_').casecmp(post.user.username) != 0) && (full_name.strip.gsub(' ', '').casecmp(post.user.username) != 0)
         display_name = "#{full_name} @#{post.user.username}"
       end
-      
+
       topic = post.topic
 
       category = (topic.category.parent_category) ? "[#{topic.category.parent_category.name}/#{topic.category.name}]": "[#{topic.category.name}]"
-      
+
       icon_url = absolute(SiteSetting.logo_small_url)
 
-      response = {
+      {
         channel: channel,
         username: SiteSetting.title,
         icon_url: icon_url.to_s,
@@ -219,7 +219,7 @@ after_initialize do
       url
     end
 
-    # TODO Not very efficient 
+    # TODO Not very efficient
     def self.set_filter(category, channel, filter)
       data = get_store(category.id)
       update = data.index {|i| i['channel'] === channel}
@@ -232,7 +232,7 @@ after_initialize do
 
       ::PluginStore.set(PLUGIN_NAME, "category_#{category.id}", data)
 
-      response = "*#{filter_to_past(filter).capitalize}* category *#{category.name}*"
+      "*#{filter_to_past(filter).capitalize}* category *#{category.name}*"
     end
 
     def self.set_filter_all(channel, filter)
@@ -247,14 +247,14 @@ after_initialize do
 
       ::PluginStore.set(PLUGIN_NAME, "category_*", data)
 
-      response = "*#{filter_to_past(filter).capitalize} all categories* on this channel."
+      "*#{filter_to_past(filter).capitalize} all categories* on this channel."
     end
 
     def self.get_store(id)
       (::PluginStore.get(PLUGIN_NAME, "category_#{id}") || [])
     end
 
-    # TODO Post other types and PMs later 
+    # TODO Post other types and PMs later
     def self.notify(id)
       post = Post.find_by({id: id})
 
@@ -266,27 +266,27 @@ after_initialize do
 
       precedence = { 'mute' => 0, 'watch' => 1, 'follow' => 1 }
 
-      uniq_func = proc { |i| i['channel'] } 
+      uniq_func = proc { |i| i['channel'] }
       sort_func = proc { |a, b| precedence[a] <=> precedence[b] }
 
       items = get_store(post.topic.category_id) | get_store("*")
 
       items.sort_by(&sort_func).uniq(&uniq_func).each do | i |
         next if (i[:filter] === 'mute') || (( post.is_first_post? && i[:filter] != 'follow' ) && (i[:filter] != 'watch'))
-        req = Net::HTTP::Post.new(uri, initheader = {'Content-Type' =>'application/json'})
+        req = Net::HTTP::Post.new(uri, 'Content-Type' =>'application/json')
         req.body = slack_message(post, i[:channel]).to_json
-        res = http.request(req)
+        http.request(req)
       end
     end
   end
 
   DiscourseEvent.on(:post_created) do |post|
-    Jobs.enqueue(:notify_slack, post: post[:id])
+    Jobs.enqueue(:notify_slack, post: post[:id]) if SiteSetting.slack_enabled?
   end
-    
+
   DiscourseSlack::Engine.routes.draw do
     post "/knock" => "slack#knock"
-    post "/command" => "slack#command" 
+    post "/command" => "slack#command"
   end
 
   Discourse::Application.routes.prepend do
