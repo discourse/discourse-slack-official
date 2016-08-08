@@ -23,34 +23,43 @@ git pull
 
 ## Configuration
 
-1. Go to `https://<yourteam>.slack.com/apps/new/A0F82E8CA-slash-commands` to create a new outgoing command.\*
+To set up this slack integration, you'll need to create a new slash command and an incoming webhook. You'll use the slash command to subscribe to notifications; Discourse will then send the notifications using the webhook.
 
-2. Enter the name of the command and click "Add Slash Command Integration".
+1. Go to `https://<your-team>.slack.com/apps/new/A0F82E8CA-slash-commands` to create a new outgoing command.\*
+
+2. Enter the name of the command (eg `/discourse`) and click "Add Slash Command Integration":
 
     ![New Slash Command](https://cloud.githubusercontent.com/assets/1386403/16739197/f925f9f6-4766-11e6-92a7-8ea7897e7150.png)  
+    
+    If you have more than one Discourse instance, you need to add add a different slash command for each instance.
 
-3. Set a URL for the slash command to post to. It should be `<your-discourse-url-here>/slack/command`
+3. In the "URL" field, enter the URL that the slash command will post to: `<your-discourse-url>/slack/command`
 
-4. Copy your API token from the Token field.  
+4. Copy your API token from the "Token" field:
 
     ![Add slash command](https://cloud.githubusercontent.com/assets/1386403/16739199/f92d42ec-4766-11e6-9ea5-131d5625db2e.png)
 
-5. Go to your discourse install's settings page found at `<your-discourse-url-here>/admin/site_settings/category/plugins` and filter by "slack". Paste your API token in the incoming webook field. The next steps will describe how to get the `webhook url` setting.  
+5. Go to your Discourse settings page, found at `<your-discourse-url>/admin/site_settings/category/plugins`. In the left-hand menu, scroll down and click "Plugins". 
+
+6. In the "slack incoming webhook token" field, paste your API token:
 
     ![Settings Page](https://cloud.githubusercontent.com/assets/1386403/16739198/f92c6b60-4766-11e6-99b2-877a370f67b5.png)  
     
-    (You can also optionally set a default user for slack to use and the size of the excerpts being posted)
+    You can optionally set the user that Slack will use, and change the size of the excerpts being posted.
 
-6. Go to `https://<yourslack>.slack.com/apps/new/A0F7XDUAZ-incoming-webhooks` to create a new webhook. Discourse will use this to post to slack.\*\*  
+6. Now, you need to create the webhook that Discourse will use to post to Slack. You only need to do this once, even if you have multiple  Discourse instances. Go to `https://<yourslack>.slack.com/apps/new/A0F7XDUAZ-incoming-webhooks` and copy the "Webhook URL". 
 
     ![New Webhook Page](https://cloud.githubusercontent.com/assets/1386403/16739200/f92dbee8-4766-11e6-9e4a-03289337a91b.png)
 
-7. Return to your settings page and paste your webhook URL token into the `slack outbound webhook url` setting.
+7. Go back to the Discourse settings page. In the "slack outbound webhook url", paste the webhook URL.
 
-8. Click enable slack in your settings and save.
+8. Select the "Enable the discourse-slack-official plugin" checkbox, and save all the changed settings.
 
-<sup>\*</sup> If you have more than one Discourse, repeat steps 1 and 2 with a unique slash command  
-<sup>\*\*</sup> You only need to do this once for more than one Discourse instance  
+9. In Slack, go to the channel you want to post notifications to, and enter the slash command you set up in step 2. 
+
+  The bot will show you the options for subscribing to notifications:
+  
+  ![Slack options](https://cloud.githubusercontent.com/assets/3482051/17478266/84614b40-5d62-11e6-9a5c-9aae615ce7db.png)
 
 ## Todo
 
