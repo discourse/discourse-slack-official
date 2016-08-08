@@ -57,7 +57,7 @@ To set up this slack integration, you'll need to create a new slash command and 
 
   The bot will show you the options for subscribing to notifications:
   
-  ![Slack options]()
+  ![Slack options](https://cloud.githubusercontent.com/assets/3482051/17478266/84614b40-5d62-11e6-9a5c-9aae615ce7db.png)
 
 <sup>\*</sup> If you have more than one Discourse, repeat steps 1 and 2 with a unique slash command  
 <sup>\*\*</sup> You only need to do this once for more than one Discourse instance  
