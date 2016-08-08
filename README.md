@@ -30,6 +30,8 @@ To set up this slack integration, you'll need to create a new slash command and 
 2. Enter the name of the command (eg `/discourse`) and click "Add Slash Command Integration":
 
     ![New Slash Command](https://cloud.githubusercontent.com/assets/1386403/16739197/f925f9f6-4766-11e6-92a7-8ea7897e7150.png)  
+    
+    If you have more than one Discourse instance, you need to add add a different slash command for each instance.
 
 3. In the "URL" field, enter the URL that the slash command will post to: `<your-discourse-url>/slack/command`
 
@@ -45,7 +47,7 @@ To set up this slack integration, you'll need to create a new slash command and 
     
     You can optionally set the user that Slack will use, and change the size of the excerpts being posted.
 
-6. Now, you need to create the webhook that Discourse will use to post to Slack. Go to `https://<yourslack>.slack.com/apps/new/A0F7XDUAZ-incoming-webhooks` and copy the "Webhook URL". \*\*  
+6. Now, you need to create the webhook that Discourse will use to post to Slack. You only need to do this once, even if you have multiple  Discourse instances. Go to `https://<yourslack>.slack.com/apps/new/A0F7XDUAZ-incoming-webhooks` and copy the "Webhook URL". 
 
     ![New Webhook Page](https://cloud.githubusercontent.com/assets/1386403/16739200/f92dbee8-4766-11e6-9e4a-03289337a91b.png)
 
@@ -58,9 +60,6 @@ To set up this slack integration, you'll need to create a new slash command and 
   The bot will show you the options for subscribing to notifications:
   
   ![Slack options](https://cloud.githubusercontent.com/assets/3482051/17478266/84614b40-5d62-11e6-9a5c-9aae615ce7db.png)
-
-<sup>\*</sup> If you have more than one Discourse, repeat steps 1 and 2 with a unique slash command  
-<sup>\*\*</sup> You only need to do this once for more than one Discourse instance  
 
 ## Todo
 
