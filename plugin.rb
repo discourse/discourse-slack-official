@@ -1,6 +1,6 @@
 # name: discourse-slack-official
 # about: This is intended to be a feature-rich plugin for slack-discourse integration
-# version: 2.2.2
+# version: 2.2.3
 # authors: Nick Sahler (nicksahler), Dave McClure (mcwumbly) for slack backdoor code.
 # url: https://github.com/nicksahler/discourse-slack-official
 
@@ -272,7 +272,7 @@ after_initialize do
       items = get_store(post.topic.category_id) | get_store("*")
 
       items.sort_by(&sort_func).uniq(&uniq_func).each do | i |
-        next if (i[:filter] === 'mute') || (( post.is_first_post? && i[:filter] != 'follow' ) && (i[:filter] != 'watch'))
+        next if (i[:filter] === 'mute') || ( ! post.is_first_post? && i[:filter] != 'watch')
         req = Net::HTTP::Post.new(uri, 'Content-Type' =>'application/json')
         req.body = slack_message(post, i[:channel]).to_json
         http.request(req)
