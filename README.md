@@ -23,7 +23,7 @@ git pull
 
 ## Configuration
 
-To set up this slack integration, you'll need to create a new slash command and an incoming webhook. You'll use the slash command to subscribe to notifications; Discourse will then send the notifcations using the webhook.
+To set up this slack integration, you'll need to create a new slash command and an incoming webhook. You'll use the slash command to subscribe to notifications; Discourse will then send the notifications using the webhook.
 
 1. Go to `https://<your-team>.slack.com/apps/new/A0F82E8CA-slash-commands` to create a new outgoing command.\*
 
