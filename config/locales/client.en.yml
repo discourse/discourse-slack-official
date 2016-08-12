@@ -1,0 +1,15 @@
+en:
+  js:
+    slack:
+      title: 'Slack'
+      header:
+        rules: 'Filter rules'
+      category: 'Category'
+      channel: 'Channel'
+      filter: 'Filter'
+      edit: 'Edit'
+      delete: 'Delete'
+      save: 'Save'
+      choose:
+        filter: 'Choose a filter'
+        category: 'Choose a category'
