@@ -64,15 +64,19 @@ after_initialize do
     end
 
     def edit
-      return render json: { message: "Error"}, status: 500 if params[:channel] == '' || !is_number?(params[:category_id])
+      return render json: { message: "slack.error.channel"}, status: 500 if params[:channel] == ''
+      return render json: { message: "slack.error.category"}, status: 500 if !is_number?(params[:category_id])
+      return render json: { message: "slack.error.filter"}, status: 500 if !(["follow", "mute", "watch"].include? params[:filter] )
+
       DiscourseSlack::Slack.set_filter_by_id(( params[:category_id] == 0) ? '*' : params[:category_id], params[:channel], params[:filter])
-      render json: { message: "Success" }
+      render json: { message: "slack.success" }
     end
 
     def delete
-      return render json: { message: "Error"}, status: 500 if params[:channel] == '' || !is_number?(params[:category_id])
+      return render json: { message: "slack.error.channel"}, status: 500 if params[:channel] == ''
+      return render json: { message: "slack.error.category"}, status: 500 if !is_number?(params[:category_id])
       DiscourseSlack::Slack.delete_filter(params[:category_id], params[:channel])
-      render json: { message: "Success" }
+      render json: { message: "slack.success" }
     end
 
     def command
