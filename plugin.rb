@@ -63,15 +63,16 @@ after_initialize do
         true if Float(string) rescue false
     end
 
+    # "0" on the client is usde to represent "all categories" - "*" on the server, to support old versions of the plugin.
     def edit
       return render json: { message: "Error"}, status: 500 if params[:channel] == '' || !is_number?(params[:category_id])
-      DiscourseSlack::Slack.set_filter_by_id(( params[:category_id] == 0) ? '*' : params[:category_id], params[:channel], params[:filter])
+      DiscourseSlack::Slack.set_filter_by_id(( params[:category_id] === "0") ? '*' : params[:category_id], params[:channel], params[:filter])
       render json: { message: "Success" }
     end
 
     def delete
       return render json: { message: "Error"}, status: 500 if params[:channel] == '' || !is_number?(params[:category_id])
-      DiscourseSlack::Slack.delete_filter(params[:category_id], params[:channel])
+      DiscourseSlack::Slack.delete_filter(( params[:category_id] === "0") ? '*' : params[:category_id], params[:channel])
       render json: { message: "Success" }
     end
 
