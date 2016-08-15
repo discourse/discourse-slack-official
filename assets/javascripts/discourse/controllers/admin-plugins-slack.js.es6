@@ -15,6 +15,8 @@ export default Ember.Controller.extend({
     save() {
       var rule = this.get('editing');
       var model = this.get('model');
+      var self = this;
+      self.set('error_message', '');
 
       Discourse.ajax("/slack/list.json", { method: 'POST', 
         data: rule.getProperties('filter', 'category_id', 'channel')
@@ -26,18 +28,23 @@ export default Ember.Controller.extend({
         } else {
           model.pushObject(FilterRule.create(rule.getProperties('filter', 'category_id', 'channel')));
         }
-      }).catch(function() {
-
+      }).catch(err => {
+        self.set( 'error_message', err.jqXHR.responseJSON.message );
       });
     },
 
     delete(rule) {
       var model = this.get('model');
+      var self = this;
+      self.set('error_message', '');
+
       Discourse.ajax("/slack/list.json", { method: 'DELETE', 
         data: rule.getProperties('filter', 'category_id', 'channel')
       }).then(function() {
         var obj = model.find((x) => ( x.get('category_id') == rule.get('category_id') && x.get('channel') === rule.get('channel') ));
         model.removeObject(obj);
+      }).catch(err => {
+        self.set( 'error_message', err.jqXHR.responseJSON.message );
       })
     }
   }
