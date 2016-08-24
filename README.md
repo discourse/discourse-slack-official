@@ -10,7 +10,7 @@ hooks:
         cmd:
           - mkdir -p plugins
           - git clone https://github.com/discourse/docker_manager.git
-          - git clone https://github.com/nicksahler/discourse-slack-official.git
+          - git clone https://github.com/discourse/discourse-slack-official.git
 ```
 
 Rebuild your container:
@@ -26,7 +26,7 @@ git pull
 To set up this slack integration, you'll need to create an incoming webhook. You'll use the settings page or an optional slash command to subscribe to notifications; Discourse will then send the notifications using the webhook.
 
 
-1. Go to `https://<yourslack>.slack.com/apps/new/A0F7XDUAZ-incoming-webhooks` and copy the "Webhook URL" to create a webhook that Discourse will use to post to Slack. You only need to do this once, even if you have multiple  Discourse instances.  
+1. Go [here](https://slack.com/apps/new/A0F7XDUAZ-incoming-webhooks) and copy the "Webhook URL" to create a webhook that Discourse will use to post to Slack. You only need to do this once, even if you have multiple  Discourse instances.  
 
     ![New Webhook Page](https://cloud.githubusercontent.com/assets/1386403/16739200/f92dbee8-4766-11e6-9e4a-03289337a91b.png)
 
