@@ -72,7 +72,10 @@ after_initialize do
 
     def delete
       return render json: { message: "Error"}, status: 500 if params[:channel] == '' || !is_number?(params[:category_id])
-      DiscourseSlack::Slack.delete_filter(( params[:category_id] === "0") ? '*' : params[:category_id], params[:channel])
+
+      DiscourseSlack::Slack.delete_filter('*', params[:channel]) if ( params[:category_id] === "0" )
+      DiscourseSlack::Slack.delete_filter(params[:category_id], params[:channel])
+
       render json: { message: "Success" }
     end
 
@@ -319,7 +322,7 @@ after_initialize do
       uniq_func = proc { |i| i['channel'] }
       sort_func = proc { |a, b| precedence[a] <=> precedence[b] }
 
-      items = get_store(post.topic.category_id) | get_store("*")
+      items = get_store(post.topic.category_id) | get_store("*") | get_store(0)
 
       items.sort_by(&sort_func).uniq(&uniq_func).each do | i |
         next if (i[:filter] === 'mute') || (( post.is_first_post? && i[:filter] != 'follow' ) && (i[:filter] != 'watch'))

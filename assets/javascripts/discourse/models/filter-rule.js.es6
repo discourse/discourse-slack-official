@@ -13,6 +13,10 @@ export default RestModel.extend({
     else {
       return Discourse.Category.findById(id) || { id: id, name: 'Deleted Category' };
     }
-  }.property('category_id')
+  }.property('category_id'),
+
+  filter_name: function() {
+    return I18n.t('slack.present.' + this.get('filter') );
+  }.property('filter')
 
 });

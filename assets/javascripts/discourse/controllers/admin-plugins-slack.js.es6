@@ -4,7 +4,12 @@ export default Ember.Controller.extend({
     return [Discourse.Category.create({ name: 'All Categories', id: 0, slug: '*'})].concat(Discourse.Category.list())
   }.property(),
 
-  filters: ['mute', 'follow', 'watch'],
+  filters: [
+    { id: 'watch', name: I18n.t('slack.future.watch'), icon:'exclamation-circle' },
+    { id: 'follow', name: I18n.t('slack.future.follow'), icon: 'circle'},
+    { id: 'mute', name: I18n.t('slack.future.mute'), icon: 'times-circle' }
+  ],
+
   editing: FilterRule.create({}),
 
   actions: {
