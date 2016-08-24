@@ -25,7 +25,7 @@ git pull
 
 To set up this slack integration, you'll need to create an incoming webhook. You'll use the settings page or an optional slash command to subscribe to notifications; Discourse will then send the notifications using the webhook. 
 
-1. Go [here](https://slack.com/apps/new/A0F7XDUAZ-incoming-webhooks), pick your channel and click the big green "Add incoming webhook Integration" button to create the webhook Discourse will use to post to Slack. You only need to do this once, even if you have multiple  Discourse instances.
+1. Go to the [Incoming Webhooks](https://slack.com/apps/new/A0F7XDUAZ-incoming-webhooks) configuration page for your Slack instance, pick your channel and click the big green "Add incoming webhook Integration" button to create the webhook Discourse will use to post to Slack. You only need to do this once, even if you have multiple  Discourse instances.
     ![Big green button page](http://i.imgur.com/HZDncCP.png)
 2. Scroll down to "integration settings" and copy the "Webhook URL". 
     ![New Webhook Page](https://cloud.githubusercontent.com/assets/1386403/16739200/f92dbee8-4766-11e6-9e4a-03289337a91b.png)
