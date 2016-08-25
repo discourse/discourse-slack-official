@@ -34,8 +34,6 @@ git pull
 3. Go to your Discourse settings page, found at `<your-discourse-url>/admin/site_settings/category/plugins`. In the **slack outbound webhook url** field, paste the webhook URL you copied from Slack.
 
     ![Discourse Slack Plugin Settings Page](http://i.imgur.com/wXwkSFR.png)
-    
-    (You can optionally set the user that Slack will use to post, and change the size of the excerpts being posted.)
 
 4. Select the **Enable checkbox**, and save all the changed settings. That's it! You're done! 
 
