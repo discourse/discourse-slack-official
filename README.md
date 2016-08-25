@@ -25,7 +25,7 @@ git pull
 
 To set up this slack integration, you'll need to create an incoming webhook. You'll use the settings page or an optional slash command to subscribe to notifications; Discourse will then send the notifications using the webhook. 
 
-1. Go to the **[Incoming Webhooks](https://slack.com/apps/new/A0F7XDUAZ-incoming-webhooks)** configuration page for your Slack instance. Pick a channel, and click the big green "Add incoming webhook Integration" button. You only need to do this once, even if you have multiple  Discourse instances.
+1. Go to the **[Incoming Webhooks](https://slack.com/apps/new/A0F7XDUAZ-incoming-webhooks)** configuration page for your Slack instance. Pick a channel, and click the big green "Add incoming webhook Integration" button. (You only need to do this once, even if you have multiple Discourse instances.)
  
     ![Big green button page](http://i.imgur.com/HZDncCP.png)
 
@@ -37,13 +37,13 @@ To set up this slack integration, you'll need to create an incoming webhook. You
 
     ![Settings Page](http://i.imgur.com/wXwkSFR.png)
     
-    You can optionally set the user that Slack will use, and change the size of the excerpts being posted.
+    (You can optionally set the user that Slack will use to post, and change the size of the excerpts being posted.)
 
-4. Select the **Enable checkbox**, and save all the changed settings.
+4. Select the **Enable checkbox**, and save all the changed settings. That's it! You're done! 
 
-That's it! You're done! By default, every new post on your Discourse will now create a Slack message in the channel you specified in step one.
+By default, every new post on your Discourse will now create a Slack message in the channel you specified in step one.
 
-To change your notification settings, go to `/admin/plugins/slack` on your Discourse, or set up [an optional slash command](./README-SLASHCOMMAND.md) to change notifications directly from Slack.
+To change your notification defaults, go to `/admin/plugins/slack` on your Discourse, or set up [an optional slash command](./README-SLASHCOMMAND.md) to change your notifications settings directly from Slack.
 
 ![Configure](http://i.imgur.com/ea8kvbE.png)
 
