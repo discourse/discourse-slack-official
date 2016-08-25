@@ -1,6 +1,6 @@
 # name: discourse-slack-official
 # about: This is intended to be a feature-rich plugin for slack-discourse integration
-# version: 2.3.2
+# version: 1.0.0
 # authors: Nick Sahler (nicksahler), Dave McClure (mcwumbly) for slack backdoor code.
 # url: https://github.com/nicksahler/discourse-slack-official
 
