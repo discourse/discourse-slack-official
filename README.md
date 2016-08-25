@@ -33,17 +33,19 @@ git pull
     
 3. Go to your Discourse settings page, found at `<your-discourse-url>/admin/site_settings/category/plugins`. In the **slack outbound webhook url** field, paste the webhook URL you copied from Slack.
 
-    ![Settings Page](http://i.imgur.com/wXwkSFR.png)
+    ![Discourse Slack Plugin Settings Page](http://i.imgur.com/wXwkSFR.png)
     
     (You can optionally set the user that Slack will use to post, and change the size of the excerpts being posted.)
 
 4. Select the **Enable checkbox**, and save all the changed settings. That's it! You're done! 
 
-By default, every new post on your Discourse will now create a Slack message in the channel you specified in step one.
+By default, every new post on your Discourse will now create a Slack message in the channel you specified in step one. To change your notification defaults, go to `/admin/plugins/slack` on your Discourse:
 
-To change your notification defaults, go to `/admin/plugins/slack` on your Discourse, or set up [an optional slash command](./README-SLASHCOMMAND.md) to change your notifications settings directly from Slack.
+![Discourse Slack plugin notification defaults](http://i.imgur.com/ea8kvbE.png)
 
-![Configure](http://i.imgur.com/ea8kvbE.png)
+Or set up an [optional slash command](./README-SLASHCOMMAND.md) to change your notifications settings directly from Slack.
+
+
 
 ## Todo
 - [ ] Enable unfurling on private Discourse instances
