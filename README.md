@@ -1,6 +1,6 @@
 ## Installation
 
-Add the this repository's `git clone` url to your container's `app.yml` file, at the bottom of the `cmd` section:
+Add this repository's `git clone` url to your container's `app.yml` file, at the bottom of the `cmd` section:
 
 ```yml
 hooks:
