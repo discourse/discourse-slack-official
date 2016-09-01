@@ -25,7 +25,7 @@ after_initialize do
   require_dependency 'application_controller'
   require_dependency 'discourse_event'
   require_dependency 'admin_constraint'
-  
+
   require_relative 'slack_parser'
 
   class ::DiscourseSlack::SlackController < ::ApplicationController
@@ -34,6 +34,7 @@ after_initialize do
     before_filter :slack_enabled?
     before_filter :slack_username_present?
     before_filter :slack_token_valid?, :except => [:list, :edit, :delete]
+    skip_before_filter :check_xhr, :preload_json, :verify_authenticity_token, except: [:list, :edit, :delete]
     before_filter :slack_outbound_webhook_url_present?
 
     def slack_enabled?
@@ -60,7 +61,7 @@ after_initialize do
     end
 
     def is_number? string
-        true if Float(string) rescue false
+      true if Float(string) rescue false
     end
 
     # "0" on the client is usde to represent "all categories" - "*" on the server, to support old versions of the plugin.
@@ -83,7 +84,7 @@ after_initialize do
       guardian = Guardian.new(User.find_by_username(SiteSetting.slack_discourse_username))
 
       tokens = params[:text].split(" ")
-      
+
       # channel name fix
       if (params[:channel_name] === "directmessage")
         channel = "@#{params[:user_name]}"
@@ -92,7 +93,6 @@ after_initialize do
       else
         channel = "##{params[:channel_name]}"
       end
-
 
       cmd = "help"
 
@@ -310,7 +310,6 @@ after_initialize do
     # TODO Post other types and PMs later
     def self.notify(id)
       post = Post.find_by({id: id})
-
       return if !(post) || (post.archetype == Archetype.private_message || post.post_type != Post.types[:regular])
 
       uri = URI(SiteSetting.slack_outbound_webhook_url)
