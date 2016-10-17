@@ -140,7 +140,7 @@ after_initialize do
     end
 
     def slack_token_valid?
-      raise Discourse::InvalidAccess.new unless SiteSetting.slack_incoming_webhook_token
+      raise Discourse::InvalidAccess.new if SiteSetting.slack_incoming_webhook_token.blank?
       raise Discourse::InvalidAccess.new unless SiteSetting.slack_incoming_webhook_token == params[:token]
     end
 
@@ -149,7 +149,7 @@ after_initialize do
     end
 
     def slack_outbound_webhook_url_present?
-      raise Discourse::InvalidAccess.new unless SiteSetting.slack_outbound_webhook_url
+      raise Discourse::InvalidAccess.new if SiteSetting.slack_outbound_webhook_url.blank?
     end
 
     def topic_route(text)
