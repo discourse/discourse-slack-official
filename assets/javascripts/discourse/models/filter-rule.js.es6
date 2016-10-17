@@ -8,7 +8,7 @@ export default RestModel.extend({
   category: function() {
     var id = this.get('category_id');
 
-    if (id === 0)
+    if (id === "0")
       return Discourse.Category.create({ name: 'All Categories', id: 0 });
     else {
       return Discourse.Category.findById(id) || { id: id, name: 'Deleted Category' };
