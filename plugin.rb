@@ -6,6 +6,7 @@
 
 require 'net/http'
 require 'json'
+require File.expand_path('../lib/validators/discourse_slack_enabled_setting_validator.rb', __FILE__)
 
 enabled_site_setting :slack_enabled
 
@@ -189,7 +190,7 @@ after_initialize do
       { 'mute' => 'muted', 'follow' => 'followed', 'watch' => 'watched' }[filter]
     end
 
-    def self.excerpt(html, max_length) 
+    def self.excerpt(html, max_length)
       doc = Nokogiri::HTML.fragment(html)
       doc.css(".lightbox-wrapper .meta").remove
       html = doc.to_html
@@ -297,7 +298,7 @@ after_initialize do
 
     def self.delete_filter(id, channel)
       data = get_store(id)
-      data.delete_if do |i| 
+      data.delete_if do |i|
         i['channel'] === channel
       end
       ::PluginStore.set(PLUGIN_NAME, "category_#{id}", data)

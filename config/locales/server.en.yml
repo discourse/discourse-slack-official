@@ -5,3 +5,7 @@ en:
     slack_incoming_webhook_token: 'Token sent in the payload from the Slack outoing webhook'
     slack_outbound_webhook_url: 'URL for outbound slack requests'
     slack_discourse_excerpt_length: 'Post excerpt length'
+    errors:
+      invalid_webhook_url: "'slack outbound webhook url' is not a valid URL."
+      slack_incoming_webhook_token_is_empty: "You must set 'slack incoming webhook token' before enabling this setting."
+      slack_outbound_webhook_url_is_empty: "You must set 'slack outbound webhook url' before enabling this setting."

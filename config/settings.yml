@@ -1,10 +1,11 @@
 plugins:
   slack_enabled:
     default: false
+    validator: "DiscourseSlackEnabledSettingValidator"
   slack_incoming_webhook_token:
-    default: replace-with-wehbook-token
+    default: ''
   slack_outbound_webhook_url:
-    default: your-url-here
+    default: ''
   slack_discourse_username:
     default: system
   slack_discourse_excerpt_length:
