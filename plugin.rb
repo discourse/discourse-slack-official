@@ -310,6 +310,8 @@ after_initialize do
 
     # TODO Post other types and PMs later
     def self.notify(id)
+      return if SiteSetting.slack_outbound_webhook_url.blank?
+
       post = Post.find_by({id: id})
       return if !(post) || (post.archetype == Archetype.private_message || post.post_type != Post.types[:regular])
 
