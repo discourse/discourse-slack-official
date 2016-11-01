@@ -1,8 +1,9 @@
 import FilterRule from 'discourse/plugins/discourse-slack-official/discourse/models/filter-rule';
+import { ajax } from 'discourse/lib/ajax';
 
 export default Discourse.Route.extend({
   model() {
-    return Discourse.ajax("/slack/list.json")
+    return ajax("/slack/list.json")
     .then(function(result) {
       var final = result.slack;
 
