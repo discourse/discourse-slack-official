@@ -53,6 +53,14 @@ export default Ember.Controller.extend({
       }).catch(err => {
         self.set( 'error_message', err.jqXHR.responseJSON.message );
       });
+    },
+
+    test_notification() {
+      ajax("/slack/test.json", { method: 'POST' });
+    }
+
+    reset_settings() {
+      ajax("/slack/reset_settings.json", { method: 'POST' });
     }
   }
 });
