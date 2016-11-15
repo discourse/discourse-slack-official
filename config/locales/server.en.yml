@@ -6,6 +6,7 @@ en:
     slack_outbound_webhook_url: 'URL for outbound slack requests'
     slack_discourse_excerpt_length: 'Post excerpt length'
     slack_icon_url: 'Icon to post to slack with (Defaults to forum icon)'
+    slack_access_token: 'Token if you are using the Web API instead of webhooks'
     errors:
       invalid_webhook_url: "'slack outbound webhook url' is not a valid URL."
       slack_incoming_webhook_token_is_empty: "You must set 'slack incoming webhook token' before enabling this setting."

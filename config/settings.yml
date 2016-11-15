@@ -12,3 +12,5 @@ plugins:
     default: 400
   slack_icon_url:
     default: ''
+  slack_access_token:
+    default: ''

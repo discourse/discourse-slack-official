@@ -39,12 +39,12 @@ after_initialize do
     requires_plugin PLUGIN_NAME
 
     before_filter :slack_enabled?
-    before_filter :slack_username_present?
-    before_filter :slack_token_valid?, :except => [:list, :edit, :delete]
-    skip_before_filter :check_xhr, :preload_json, :verify_authenticity_token, except: [:list, :edit, :delete]
-    before_filter :slack_outbound_webhook_url_present?
+    before_filter :slack_discourse_username_present?
+    
     before_filter :slack_token_valid?, :except => [:list, :edit, :delete, :test_notification, :reset_settings]
     skip_before_filter :check_xhr, :preload_json, :verify_authenticity_token, except: [:list, :edit, :delete, :test_notification, :reset_settings]
+    
+    before_filter :slack_webhook_or_token_present?
 
     def slack_enabled?
       raise Discourse::NotFound unless SiteSetting.slack_enabled?
@@ -162,12 +162,12 @@ after_initialize do
       raise Discourse::InvalidAccess.new unless SiteSetting.slack_incoming_webhook_token == params[:token]
     end
 
-    def slack_username_present?
+    def slack_discourse_username_present?
       raise Discourse::InvalidAccess.new unless SiteSetting.slack_discourse_username
     end
 
-    def slack_outbound_webhook_url_present?
-      raise Discourse::InvalidAccess.new if SiteSetting.slack_outbound_webhook_url.blank?
+    def slack_webhook_or_token_present?
+      raise Discourse::InvalidAccess.new if SiteSetting.slack_outbound_webhook_url.blank? && SiteSetting.slack_access_token.blank?
     end
 
     def topic_route(text)
@@ -264,32 +264,44 @@ after_initialize do
 
       category = (topic.category.parent_category) ? "[#{topic.category.parent_category.name}/#{topic.category.name}]": "[#{topic.category.name}]"
 
-      icon_url = absolute(SiteSetting.logo_small_url)
       icon_url = SiteSetting.slack_icon_url
       icon_url = absolute(SiteSetting.logo_small_url) if SiteSetting.slack_icon_url.empty?
 
-      {
+      message = {
         channel: channel,
         username: SiteSetting.title,
         icon_url: icon_url.to_s,
 
-        attachments: [
-          {
-            fallback: "#{topic.title} - #{display_name}",
-            author_name: display_name,
-            author_icon: post.user.small_avatar_url,
-
-            color: '#' + topic.category.color,
-
-            title: "#{topic.title} #{(category === '[uncategorized]')? '' : category} #{(topic.tags.present?)? topic.tags.map {|tag| tag.name}.join(', ') : ''}",
-            title_link: post.full_url,
-            thumb_url: post.full_url,
-
-            text: ::DiscourseSlack::Slack.excerpt(post.cooked, SiteSetting.slack_discourse_excerpt_length),
-            mrkdwn_in: ["text"]
-          }
-        ]
+        attachments: []
       }
+
+      if (post.is_first_post?)
+        message[:attachments].push ({
+          fallback: "#{topic.title} - #{display_name}",
+          author_name: display_name,
+          author_icon: post.user.small_avatar_url,
+
+          color: '#' + topic.category.color,
+
+          title: "#{topic.title} #{(category === '[uncategorized]')? '' : category} #{(topic.tags.present?)? topic.tags.map {|tag| tag.name}.join(', ') : ''}",
+          title_link: post.full_url,
+          thumb_url: post.full_url,
+
+          text: ::DiscourseSlack::Slack.excerpt(post.cooked, SiteSetting.slack_discourse_excerpt_length),
+          mrkdwn_in: ["text"]
+        })
+      else
+        message[:attachments].push ({
+          fallback: "#{topic.title} - #{display_name}",
+          author_name: display_name,
+          author_icon: post.user.small_avatar_url,
+          color: '#' + topic.category.color,
+          text: ::DiscourseSlack::Slack.excerpt(post.cooked, SiteSetting.slack_discourse_excerpt_length),
+          mrkdwn_in: ["text"]
+        })
+      end
+
+      message
     end
 
     def self.absolute(raw)
@@ -328,15 +340,13 @@ after_initialize do
       (::PluginStore.get(PLUGIN_NAME, "category_#{id}") || [])
     end
 
-    # TODO Post other types and PMs later
     def self.notify(id)
       return if SiteSetting.slack_outbound_webhook_url.blank?
 
       post = Post.find_by({id: id})
-      return if !(post) || (post.archetype == Archetype.private_message || post.post_type != Post.types[:regular])
+      return if post.blank? || (post.topic.archetype == Archetype.private_message || post.post_type != Post.types[:regular])
 
-      uri = URI(SiteSetting.slack_outbound_webhook_url)
-      http = Net::HTTP.new(uri.host, uri.port)
+      http = Net::HTTP.new( ( SiteSetting.slack_access_token.empty? ) ? "hooks.slack.com" : "slack.com" , 443)
       http.use_ssl = true
 
       precedence = { 'mute' => 0, 'watch' => 1, 'follow' => 1 }
@@ -345,13 +355,53 @@ after_initialize do
       sort_func = proc { |a, b| precedence[a] <=> precedence[b] }
 
       items = get_store(post.topic.category_id) | get_store("*") | get_store(0)
+      responses = []
 
       items.sort_by(&sort_func).uniq(&uniq_func).each do | i |
-        next if (i[:filter] === 'mute') || ( !(post.is_first_post?) && i[:filter] == 'follow' )
-        req = Net::HTTP::Post.new(uri, 'Content-Type' =>'application/json')
-        req.body = slack_message(post, i[:channel]).to_json
-        http.request(req)
+        next if ( i[:filter] === 'mute') || ( !(post.is_first_post?) && i[:filter] == 'follow' )
+
+        message = slack_message(post, i[:channel])
+
+        if !(SiteSetting.slack_access_token.empty?)
+          response = nil
+          uri = ""
+          record = ::PluginStore.get(PLUGIN_NAME, "topic_#{post.topic.id}_#{i[:channel]}")
+          
+          if (record.present? && post.topic.age_in_minutes < 5 && record[:message][:attachments].length < 5)
+            attachments = record[:message][:attachments]
+            attachments.concat message[:attachments]
+
+            uri = URI("https://slack.com/api/chat.update" + 
+              "?token=#{SiteSetting.slack_access_token}" +
+              "&username=#{CGI::escape(record[:message][:username])}" +
+              "&text=#{CGI::escape(record[:message][:text])}" +
+              "&channel=#{record[:channel]}" +
+              "&attachments=#{CGI::escape(attachments.to_json)}" +
+              "&ts=#{record[:ts]}"
+            )
+          else
+            uri = URI("https://slack.com/api/chat.postMessage" + 
+              "?token=#{SiteSetting.slack_access_token}" +
+              "&username=#{CGI::escape(message[:username])}" +
+              "&icon_url=#{CGI::escape(message[:icon_url])}" +
+              "&channel=#{message[:channel]}" +
+              "&attachments=#{CGI::escape(message[:attachments].to_json)}"
+            )
+          end
+
+          response = http.request(Net::HTTP::Post.new(uri))
+
+          ::PluginStore.set(PLUGIN_NAME, "topic_#{post.topic.id}_#{i[:channel]}", JSON.parse(response.body) )
+        elsif !(SiteSetting.slack_outbound_webhook_url.empty?)
+          req = Net::HTTP::Post.new(URI(SiteSetting.slack_outbound_webhook_url), 'Content-Type' =>'application/json')
+          req.body = message.to_json
+          response = http.request(req)
+        end
+
+        responses.push(response.body) if response
       end
+
+      responses
     end
   end
 
