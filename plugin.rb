@@ -15,6 +15,12 @@ PLUGIN_NAME = "discourse-slack-official".freeze
 register_asset "stylesheets/slack_admin.scss"
 
 after_initialize do
+
+  unless ::PluginStore.get(PLUGIN_NAME, "not_first_time")
+    ::PluginStore.set(PLUGIN_NAME, "not_first_time", true)
+    ::PluginStore.set(PLUGIN_NAME, "category_*", [{ category_id: '0', channel: "#general", filter: "follow" }])
+  end
+
   module ::DiscourseSlack
     class Engine < ::Rails::Engine
       engine_name PLUGIN_NAME
