@@ -37,6 +37,8 @@ after_initialize do
     before_filter :slack_token_valid?, :except => [:list, :edit, :delete]
     skip_before_filter :check_xhr, :preload_json, :verify_authenticity_token, except: [:list, :edit, :delete]
     before_filter :slack_outbound_webhook_url_present?
+    before_filter :slack_token_valid?, :except => [:list, :edit, :delete, :test_notification, :reset_settings]
+    skip_before_filter :check_xhr, :preload_json, :verify_authenticity_token, except: [:list, :edit, :delete, :test_notification, :reset_settings]
 
     def slack_enabled?
       raise Discourse::NotFound unless SiteSetting.slack_enabled?
@@ -59,6 +61,16 @@ after_initialize do
       end
 
       render json: (params[:raw]) ? rows : out
+    end
+
+    def test_notification
+      response = DiscourseSlack::Slack.notify(Topic.order('RANDOM()').where(closed: false, archived: false).first().ordered_posts().first().id)
+      render json: { message: "Success" }, status: 200
+    end
+
+    def reset_settings
+      PluginStoreRow.where(plugin_name: PLUGIN_NAME).destroy_all
+      render :json, {}.to_s, status: 200
     end
 
     def is_number? string
@@ -343,9 +355,13 @@ after_initialize do
     post "/knock" => "slack#knock"
     post "/command" => "slack#command"
 
+    post "/test" => "slack#test_notification"
+    post "/reset_settings" => "slack#reset_settings"
+
     get "/list" => "slack#list", constraints: AdminConstraint.new
     post "/list" => "slack#edit", constraints: AdminConstraint.new
     delete "/list" => "slack#delete", constraints: AdminConstraint.new
+    
   end
 
   Discourse::Application.routes.prepend do

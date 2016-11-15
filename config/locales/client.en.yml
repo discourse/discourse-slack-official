@@ -7,6 +7,8 @@ en:
       category: 'Category'
       channel: 'Channel'
       filter: 'Filter'
+      test_notification: 'Test Notification'
+      reset_settings: 'Reset All Settings'
       edit: 'Edit'
       delete: 'Delete'
       save: 'Save'
