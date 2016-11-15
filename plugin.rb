@@ -259,6 +259,8 @@ after_initialize do
       category = (topic.category.parent_category) ? "[#{topic.category.parent_category.name}/#{topic.category.name}]": "[#{topic.category.name}]"
 
       icon_url = absolute(SiteSetting.logo_small_url)
+      icon_url = SiteSetting.slack_icon_url
+      icon_url = absolute(SiteSetting.logo_small_url) if SiteSetting.slack_icon_url.empty?
 
       {
         channel: channel,
