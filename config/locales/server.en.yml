@@ -9,5 +9,4 @@ en:
     slack_access_token: 'Token if you are using the Web API instead of webhooks'
     errors:
       invalid_webhook_url: "'slack outbound webhook url' is not a valid URL."
-      slack_incoming_webhook_token_is_empty: "You must set 'slack incoming webhook token' before enabling this setting."
       slack_outbound_webhook_url_is_empty: "You must set 'slack outbound webhook url' before enabling this setting."

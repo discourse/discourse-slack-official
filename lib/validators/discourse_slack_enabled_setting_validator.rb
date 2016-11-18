@@ -6,7 +6,6 @@ class DiscourseSlackEnabledSettingValidator
   def valid_value?(val)
     return true if val == 'f'
     return false if !valid_webhook_url? || SiteSetting.slack_outbound_webhook_url.blank?
-    return false if SiteSetting.slack_incoming_webhook_token.blank?
     true
   end
 
@@ -15,8 +14,6 @@ class DiscourseSlackEnabledSettingValidator
       I18n.t('site_settings.errors.invalid_webhook_url')
     elsif SiteSetting.slack_outbound_webhook_url.blank?
       I18n.t('site_settings.errors.slack_outbound_webhook_url_is_empty')
-    elsif SiteSetting.slack_incoming_webhook_token.blank?
-      I18n.t('site_settings.errors.slack_incoming_webhook_token_is_empty')
     end
   end
 
