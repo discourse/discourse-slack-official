@@ -271,36 +271,27 @@ after_initialize do
         channel: channel,
         username: SiteSetting.title,
         icon_url: icon_url.to_s,
-
         attachments: []
       }
 
-      if (post.is_first_post?)
-        message[:attachments].push ({
-          fallback: "#{topic.title} - #{display_name}",
-          author_name: display_name,
-          author_icon: post.user.small_avatar_url,
+      summary = {
+        fallback: "#{topic.title} - #{display_name}",
+        author_name: display_name,
+        author_icon: post.user.small_avatar_url,
+        color: '#' + topic.category.color,
+        text: ::DiscourseSlack::Slack.excerpt(post.cooked, SiteSetting.slack_discourse_excerpt_length),
+        mrkdwn_in: ["text"]
+      }
 
-          color: '#' + topic.category.color,
+      record = ::PluginStore.get(PLUGIN_NAME, "topic_#{post.topic.id}_#{channel}")
 
-          title: "#{topic.title} #{(category === '[uncategorized]')? '' : category} #{(topic.tags.present?)? topic.tags.map {|tag| tag.name}.join(', ') : ''}",
-          title_link: post.full_url,
-          thumb_url: post.full_url,
-
-          text: ::DiscourseSlack::Slack.excerpt(post.cooked, SiteSetting.slack_discourse_excerpt_length),
-          mrkdwn_in: ["text"]
-        })
-      else
-        message[:attachments].push ({
-          fallback: "#{topic.title} - #{display_name}",
-          author_name: display_name,
-          author_icon: post.user.small_avatar_url,
-          color: '#' + topic.category.color,
-          text: ::DiscourseSlack::Slack.excerpt(post.cooked, SiteSetting.slack_discourse_excerpt_length),
-          mrkdwn_in: ["text"]
-        })
+      if (SiteSetting.slack_access_token.empty? || post.is_first_post? || record.blank? || (record.present? &&  ((Time.now.to_i - record[:ts].split('.')[0].to_i)/ 60) >= 5 ))
+        summary[:title] = "#{topic.title} #{(category === '[uncategorized]')? '' : category} #{(topic.tags.present?)? topic.tags.map {|tag| tag.name}.join(', ') : ''}"
+        summary[:title_link] = post.full_url
+        summary[:thumb_url] = post.full_url
       end
 
+      message[:attachments].push(summary)
       message
     end
 
@@ -351,7 +342,7 @@ after_initialize do
 
       precedence = { 'mute' => 0, 'watch' => 1, 'follow' => 1 }
 
-      uniq_func = proc { |i| i['channel'] }
+      uniq_func = proc { |i| i[:channel] }
       sort_func = proc { |a, b| precedence[a] <=> precedence[b] }
 
       items = get_store(post.topic.category_id) | get_store("*") | get_store(0)
@@ -367,7 +358,7 @@ after_initialize do
           uri = ""
           record = ::PluginStore.get(PLUGIN_NAME, "topic_#{post.topic.id}_#{i[:channel]}")
           
-          if (record.present? && post.topic.age_in_minutes < 5 && record[:message][:attachments].length < 5)
+          if (record.present? && ((Time.now.to_i - record[:ts].split('.')[0].to_i)/ 60) < 5 && record[:message][:attachments].length < 5)
             attachments = record[:message][:attachments]
             attachments.concat message[:attachments]
 
@@ -384,7 +375,7 @@ after_initialize do
               "?token=#{SiteSetting.slack_access_token}" +
               "&username=#{CGI::escape(message[:username])}" +
               "&icon_url=#{CGI::escape(message[:icon_url])}" +
-              "&channel=#{message[:channel]}" +
+              "&channel=#{ message[:channel].gsub('#', '') }" +
               "&attachments=#{CGI::escape(message[:attachments].to_json)}"
             )
           end
