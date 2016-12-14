@@ -37,9 +37,12 @@
   {{!-- TODO translate --}}
   <p>To modify these settings from slack, set up a slash command using <a href="https://github.com/discourse/discourse-slack-official/blob/master/README.md">these instructions</a></p>
 
-  {{#d-button action="testNotification" icon="rocket" class="test" title="slack.test_notification"}}
-    {{i18n "slack.test_notification"}}
-  {{/d-button}}
+  {{d-button action="testNotification"
+      icon="rocket"
+      class="test"
+      disabled=testingNotification
+      title="slack.test_notification"
+      label="slack.test_notification"}}
 
   {{#d-button action="resetSettings" icon="trash" class="reset" title="slack.reset_settings"}}
     {{i18n "slack.reset_settings"}}

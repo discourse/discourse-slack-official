@@ -50,7 +50,13 @@ export default Ember.Controller.extend({
     },
 
     testNotification() {
-      ajax("/slack/test.json", { method: 'POST' });
+      this.set('testingNotification', true);
+
+      ajax("/slack/test.json", { method: 'POST' })
+        .catch(popupAjaxError)
+        .finally(() => {
+          this.set('testingNotification', false)
+        });
     },
 
     resetSettings() {
