@@ -31,17 +31,17 @@
           {{d-button action="save" icon="save" class="save btn-primary" title="slack.save"}}
         </div>
       </td>
-    </tr>  
+    </tr>
   </table>
-  <p class="error">{{#if error_message}} {{ i18n error_message }} {{/if}}</p>
+
   {{!-- TODO translate --}}
   <p>To modify these settings from slack, set up a slash command using <a href="https://github.com/discourse/discourse-slack-official/blob/master/README.md">these instructions</a></p>
 
-  {{#d-button action="test_notification" icon="rocket" class="test" title="slack.test_notification"}}
+  {{#d-button action="testNotification" icon="rocket" class="test" title="slack.test_notification"}}
     {{i18n "slack.test_notification"}}
   {{/d-button}}
 
-  {{#d-button action="reset_settings" icon="trash" class="reset" title="slack.reset_settings"}}
+  {{#d-button action="resetSettings" icon="trash" class="reset" title="slack.reset_settings"}}
     {{i18n "slack.reset_settings"}}
   {{/d-button}}
 </section>

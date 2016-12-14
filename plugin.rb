@@ -40,10 +40,10 @@ after_initialize do
 
     before_filter :slack_enabled?
     before_filter :slack_discourse_username_present?
-    
+
     before_filter :slack_token_valid?, :except => [:list, :edit, :delete, :test_notification, :reset_settings]
     skip_before_filter :check_xhr, :preload_json, :verify_authenticity_token, except: [:list, :edit, :delete, :test_notification, :reset_settings]
-    
+
     before_filter :slack_webhook_or_token_present?
 
     def slack_enabled?
@@ -70,13 +70,13 @@ after_initialize do
     end
 
     def test_notification
-      response = DiscourseSlack::Slack.notify(Topic.order('RANDOM()').where(closed: false, archived: false).first().ordered_posts().first().id)
-      render json: { message: "Success" }, status: 200
+      response = DiscourseSlack::Slack.notify(Topic.order('RANDOM()').where(closed: false, archived: false).first.ordered_post.first.id)
+      render json: success_json
     end
 
     def reset_settings
       PluginStoreRow.where(plugin_name: PLUGIN_NAME).destroy_all
-      render :json, {}.to_s, status: 200
+      render json: success_json
     end
 
     def is_number? string
@@ -87,7 +87,7 @@ after_initialize do
     def edit
       return render json: { message: "Error"}, status: 500 if params[:channel] == '' || !is_number?(params[:category_id])
       DiscourseSlack::Slack.set_filter_by_id(( params[:category_id] === "0") ? '*' : params[:category_id], params[:channel], params[:filter])
-      render json: { message: "Success" }
+      render json: success_json
     end
 
     def delete
@@ -96,7 +96,7 @@ after_initialize do
       DiscourseSlack::Slack.delete_filter('*', params[:channel]) if ( params[:category_id] === "0" )
       DiscourseSlack::Slack.delete_filter(params[:category_id], params[:channel])
 
-      render json: { message: "Success" }
+      render json: success_json
     end
 
     def command
@@ -357,12 +357,12 @@ after_initialize do
           response = nil
           uri = ""
           record = ::PluginStore.get(PLUGIN_NAME, "topic_#{post.topic.id}_#{i[:channel]}")
-          
+
           if (record.present? && ((Time.now.to_i - record[:ts].split('.')[0].to_i)/ 60) < 5 && record[:message][:attachments].length < 5)
             attachments = record[:message][:attachments]
             attachments.concat message[:attachments]
 
-            uri = URI("https://slack.com/api/chat.update" + 
+            uri = URI("https://slack.com/api/chat.update" +
               "?token=#{SiteSetting.slack_access_token}" +
               "&username=#{CGI::escape(record[:message][:username])}" +
               "&text=#{CGI::escape(record[:message][:text])}" +
@@ -371,7 +371,7 @@ after_initialize do
               "&ts=#{record[:ts]}"
             )
           else
-            uri = URI("https://slack.com/api/chat.postMessage" + 
+            uri = URI("https://slack.com/api/chat.postMessage" +
               "?token=#{SiteSetting.slack_access_token}" +
               "&username=#{CGI::escape(message[:username])}" +
               "&icon_url=#{CGI::escape(message[:icon_url])}" +
@@ -410,7 +410,7 @@ after_initialize do
     get "/list" => "slack#list", constraints: AdminConstraint.new
     post "/list" => "slack#edit", constraints: AdminConstraint.new
     delete "/list" => "slack#delete", constraints: AdminConstraint.new
-    
+
   end
 
   Discourse::Application.routes.prepend do

@@ -1,5 +1,6 @@
 import FilterRule from 'discourse/plugins/discourse-slack-official/discourse/models/filter-rule';
 import { ajax } from 'discourse/lib/ajax';
+import { popupAjaxError } from 'discourse/lib/ajax-error';
 
 export default Ember.Controller.extend({
   categories: function() {
@@ -20,14 +21,13 @@ export default Ember.Controller.extend({
     },
 
     save() {
-      var rule = this.get('editing');
-      var model = this.get('model');
-      var self = this;
-      self.set('error_message', '');
+      const rule = this.get('editing');
+      const model = this.get('model');
 
-      ajax("/slack/list.json", { method: 'POST',
+      ajax("/slack/list.json", {
+        method: 'POST',
         data: rule.getProperties('filter', 'category_id', 'channel')
-      }).then(function() {
+      }).then(() => {
         var obj = model.find((x) => ( x.get('category_id') === rule.get('category_id') && x.get('channel') === rule.get('channel') ));
         if (obj) {
           obj.set('channel', rule.channel);
@@ -35,31 +35,25 @@ export default Ember.Controller.extend({
         } else {
           model.pushObject(FilterRule.create(rule.getProperties('filter', 'category_id', 'channel')));
         }
-      }).catch(err => {
-        self.set( 'error_message', err.jqXHR.responseJSON.message );
-      });
+      }).catch(popupAjaxError);
     },
 
     delete(rule) {
-      var model = this.get('model');
-      var self = this;
-      self.set('error_message', '');
+      const model = this.get('model');
 
       ajax("/slack/list.json", { method: 'DELETE',
         data: rule.getProperties('filter', 'category_id', 'channel')
-      }).then(function() {
+      }).then(() => {
         var obj = model.find((x) => ( x.get('category_id') === rule.get('category_id') && x.get('channel') === rule.get('channel') ));
         model.removeObject(obj);
-      }).catch(err => {
-        self.set( 'error_message', err.jqXHR.responseJSON.message );
-      });
+      }).catch(popupAjaxError);
     },
 
-    test_notification() {
+    testNotification() {
       ajax("/slack/test.json", { method: 'POST' });
     },
 
-    reset_settings() {
+    resetSettings() {
       ajax("/slack/reset_settings.json", { method: 'POST' });
     }
   }
