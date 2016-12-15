@@ -2,7 +2,7 @@
 # about: This is intended to be a feature-rich plugin for slack-discourse integration
 # version: 1.0.0
 # authors: Nick Sahler (nicksahler), Dave McClure (mcwumbly) for slack backdoor code.
-# url: https://github.com/nicksahler/discourse-slack-official
+# url: https://github.com/discourse/discourse-slack-official
 
 require 'net/http'
 require 'json'
