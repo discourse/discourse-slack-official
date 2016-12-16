@@ -5,7 +5,6 @@ describe Jobs::NotifySlack do
   before do
     SiteSetting.slack_outbound_webhook_url = "https://hooks.slack.com/services/X/Y/Z"
     SiteSetting.slack_enabled = true
-    SiteSetting.post_to_slack_window_mins = 10
     FakeWeb.register_uri(:post, SiteSetting.slack_outbound_webhook_url, :body => "success")
   end
 

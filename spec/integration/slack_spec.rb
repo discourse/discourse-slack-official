@@ -9,12 +9,25 @@ describe "Slack" do
   end
 
   let(:delay) { SiteSetting.post_to_slack_window_mins.minutes }
+  let(:post) { Fabricate(:post) }
 
-  context 'notify' do
+  context 'post' do
+
     it 'should schedule a job for slack post' do
-      post = Fabricate(:post)
-      Jobs.expects(:enqueue_in).with(delay, :notify_slack, has_entry(post_id: post[:id])).never
+      Timecop.freeze(Time.zone.now) do
+        Jobs.expects(:enqueue_in).with(delay, :notify_slack, has_entry(post_id: post.id))
+        DiscourseEvent.trigger(:post_created, post)
+      end
     end
+
+    it 'should not schedule a job for slack post' do
+      SiteSetting.slack_enabled = false
+      Timecop.freeze(Time.zone.now) do
+        Jobs.expects(:enqueue_in).with(delay, :notify_slack, has_entry(post_id: post.id)).never
+        DiscourseEvent.trigger(:post_created, post)
+      end
+    end
+
   end
 
 end
