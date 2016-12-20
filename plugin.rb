@@ -70,7 +70,11 @@ after_initialize do
     end
 
     def test_notification
-      response = DiscourseSlack::Slack.notify(Topic.order('RANDOM()').where(closed: false, archived: false).first.ordered_post.first.id)
+      DiscourseSlack::Slack.notify(
+        Topic.order('RANDOM()').where(closed: false, archived: false)
+          .first.ordered_posts.first.id
+      )
+
       render json: success_json
     end
 
