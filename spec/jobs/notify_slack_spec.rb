@@ -12,8 +12,8 @@ describe Jobs::NotifySlack do
 
   context 'notify' do
     it 'should try to send notification' do
-      responses = Jobs::NotifySlack.new.execute({post_id: post[:id]})
-      expect(responses[0]).to eq("success")
+      response = Jobs::NotifySlack.new.execute({post_id: post[:id]})
+      expect(response[0]).to eq("success")
     end
   end
 
