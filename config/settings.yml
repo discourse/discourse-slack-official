@@ -1,6 +1,7 @@
 plugins:
   slack_enabled:
     default: false
+    client: true
     validator: "DiscourseSlackEnabledSettingValidator"
   slack_incoming_webhook_token:
     default: ''
