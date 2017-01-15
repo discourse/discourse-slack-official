@@ -7,6 +7,7 @@ describe 'Slack' do
 
   let(:first_post) { Fabricate(:post) }
   let(:topic) { Fabricate(:topic, posts: [first_post]) }
+  let(:delay) { SiteSetting.post_to_slack_window_secs.seconds }
 
   describe 'testing notification' do
     it 'should ping slack successfully' do
@@ -18,23 +19,23 @@ describe 'Slack' do
     end
   end
 
-  let(:post) { Fabricate(:post) }
-  let(:delay) { SiteSetting.post_to_slack_window_secs.seconds }
-
   context 'post' do
 
     it 'should schedule a job for slack post' do
       Timecop.freeze(Time.zone.now) do
-        Jobs.expects(:enqueue_in).with(delay, :notify_slack, has_entry(post_id: post.id))
-        DiscourseEvent.trigger(:post_created, post)
+        Jobs.expects(:enqueue_in).with(delay, :notify_slack, has_entry(post_id: first_post.id))
+        DiscourseEvent.trigger(:post_created, first_post)
       end
     end
 
-    it 'should not schedule a job for slack post' do
-      SiteSetting.slack_enabled = false
-      Timecop.freeze(Time.zone.now) do
-        Jobs.expects(:enqueue_in).with(delay, :notify_slack, has_entry(post_id: post.id)).never
-        DiscourseEvent.trigger(:post_created, post)
+    describe 'when plugin is not enabled' do
+      site_setting(:slack_enabled, false)
+
+      it 'should not schedule a job for slack post' do
+        Timecop.freeze(Time.zone.now) do
+          Jobs.expects(:enqueue_in).with(delay, :notify_slack, has_entry(post_id: first_post.id)).never
+          DiscourseEvent.trigger(:post_created, first_post)
+        end
       end
     end
 
