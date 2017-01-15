@@ -15,3 +15,5 @@ plugins:
     default: ''
   slack_access_token:
     default: ''
+  post_to_slack_window_secs:
+    default: 20

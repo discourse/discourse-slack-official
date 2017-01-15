@@ -401,7 +401,7 @@ after_initialize do
   end
 
   DiscourseEvent.on(:post_created) do |post|
-    Jobs.enqueue(:notify_slack, post_id: post[:id]) if SiteSetting.slack_enabled?
+    Jobs.enqueue_in(SiteSetting.post_to_slack_window_secs.seconds, :notify_slack, post_id: post[:id]) if SiteSetting.slack_enabled?
   end
 
   DiscourseSlack::Engine.routes.draw do
