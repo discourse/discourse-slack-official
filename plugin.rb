@@ -52,18 +52,43 @@ after_initialize do
 
     def list
       rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME).where("key ~* :pat", :pat => '^category_.*')
+
+      rows.each do |row|
+        data = row.value
+        ::PluginStore.cast_value(row.type_name, data).each do | rule |
+          unless rule[:migrated].present? && rule[:migrated]
+            id = row.key.gsub('category_', '')
+            channel = rule[:channel]
+            data = ::PluginStore.get(PLUGIN_NAME, "category_#{id}")
+            update = data.index {|i| i['channel'] === channel }
+            DiscourseSlack::Slack.set_filter(channel, rule[:filter], id)
+            data[update]['migrated'] = true
+            data = data.uniq { |i| i['channel'] }
+            ::PluginStore.set(PLUGIN_NAME, "category_#{id}", data.uniq)
+          end
+        end
+      end
+
+      rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME).where("key ~* :pat", :pat => '^filter_.*')
       out = []
 
       rows.each do |row|
-        ::PluginStore.cast_value(row.type_name, row.value).each do | rule |
-          x = {
-            category_id: row.key.gsub('category_', '').gsub('*', '0'),
-            channel: rule[:channel],
-            filter: rule[:filter]
-          }
-
-          out.push x
+        rule = ::PluginStore.cast_value(row.type_name, row.value)
+        if rule[:category_id].present?
+          category_id = rule[:category_id]
+          category_id = 0 if category_id === "*"
+        else
+          category_id = -1
         end
+        x = {
+          id: row.key.gsub('filter_', ''),
+          channel: rule[:channel],
+          category_id: category_id,
+          tags: rule[:tags],
+          filter: rule[:filter]
+        }
+
+        out.push x
       end
 
       render json: (params[:raw]) ? rows : out
@@ -90,15 +115,21 @@ after_initialize do
     # "0" on the client is usde to represent "all categories" - "*" on the server, to support old versions of the plugin.
     def edit
       return render json: { message: "Error"}, status: 500 if params[:channel] == '' || !is_number?(params[:category_id])
-      DiscourseSlack::Slack.set_filter_by_id(( params[:category_id] === "0") ? '*' : params[:category_id], params[:channel], params[:filter])
+      category_id = params[:category_id]
+      category_id = "*" if category_id === "0"
+      category_id = nil if category_id === "-1"
+      if params[:id].present?
+        DiscourseSlack::Slack.update_filter(params[:id], params[:channel], params[:filter], category_id, params[:tags])
+      else
+        DiscourseSlack::Slack.set_filter(params[:channel], params[:filter], category_id, params[:tags])
+      end
       render json: success_json
     end
 
     def delete
-      return render json: { message: "Error"}, status: 500 if params[:channel] == '' || !is_number?(params[:category_id])
+      return render json: { message: "Error"}, status: 500 if params[:id].nil?
 
-      DiscourseSlack::Slack.delete_filter('*', params[:channel]) if ( params[:category_id] === "0" )
-      DiscourseSlack::Slack.delete_filter(params[:category_id], params[:channel])
+      DiscourseSlack::Slack.delete_filter(params[:id])
 
       render json: success_json
     end
@@ -306,33 +337,31 @@ after_initialize do
       url
     end
 
-    def self.set_filter_by_id(id, channel, filter, channel_id = nil)
-      data = get_store(id)
+    def self.set_filter(channel, filter, category_id = nil, tags = [])
+      id = SecureRandom.hex(16)
 
-      update = data.index {|i| i['channel'] === channel || i['channel'] === channel_id }
+      data = { channel: channel, filter: filter, category_id: category_id, tags: tags }
 
-      if update
-        data[update]['filter'] = filter
-        data[update]['channel'] = channel # fix old IDs
-      else
-        data.push({ channel: channel, filter: filter })
-      end
-
-      data = data.uniq { |i| i['channel'] }
-
-      ::PluginStore.set(PLUGIN_NAME, "category_#{id}", data.uniq)
+      ::PluginStore.set(PLUGIN_NAME, "filter_#{id}", data)
     end
 
-    def self.delete_filter(id, channel)
+    def self.update_filter(id, channel, filter, category_id = nil, tags = [])
       data = get_store(id)
-      data.delete_if do |i|
-        i['channel'] === channel
-      end
-      ::PluginStore.set(PLUGIN_NAME, "category_#{id}", data)
+
+      data['filter'] = filter
+      data['channel'] = channel # fix old IDs
+      data['category_id'] = category_id
+      data['tags'] = tags
+
+      ::PluginStore.set(PLUGIN_NAME, "filter_#{id}", data)
+    end
+
+    def self.delete_filter(id)
+      ::PluginStore.remove(PLUGIN_NAME, "filter_#{id}")
     end
 
     def self.get_store(id)
-      (::PluginStore.get(PLUGIN_NAME, "category_#{id}") || [])
+      (::PluginStore.get(PLUGIN_NAME, "filter_#{id}") || [])
     end
 
     def self.notify(id)

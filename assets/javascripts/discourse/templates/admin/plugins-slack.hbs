@@ -2,16 +2,18 @@
   <h1>{{i18n "slack.header.rules"}}</h1>
   <table>
     <tr>
-      <th>{{i18n "slack.category"}}</th>
       <th>{{i18n "slack.channel"}}</th>
+      <th>{{i18n "slack.category"}}</th>
+      <th>{{i18n "slack.tags"}}</th>
       <th>{{i18n "slack.filter"}}</th>
       <th></th>
     </tr>
 
     {{#each model as |rule|}}
       <tr class="">
-        <td>{{rule.category.name}}</td>
         <td>{{rule.channel}}</td>
+        <td>{{rule.category.name}}</td>
+        <td>{{rule.tags}}</td>
         <td>{{rule.filter_name}}</td>
         <td>
           <div class="pull-right">
@@ -21,11 +23,14 @@
         </td>
       </tr>
     {{/each}}
+  </table>
 
+  <table>
     <tr class="new-filter">
-      <td>{{combo-box value=editing.category_id content=categories}}</td>
-      <td>{{text-field value=editing.channel placeholder='#channel, @user or Channel ID' class="channel"}}</td>
-      <td>{{combo-box content=filters value=editing.filter none='slack.choose.filter'}}</td>
+      <td>{{text-field value=editing.channel placeholder='#channel, @user or Channel ID' class="channel" width="200px"}}</td>
+      <td>{{combo-box value=editing.category_id content=categories width="200px"}}</td>
+      <td>{{tag-chooser tags=editing.tags placeholderKey="slack.choose.tags" width="200px"}}</td>
+      <td>{{combo-box content=filters value=editing.filter none='slack.choose.filter' width="200px"}}</td>
       <td>
         <div class="pull-right">
           {{d-button action="save" icon="save" class="save btn-primary" title="slack.save"}}

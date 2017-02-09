@@ -4,7 +4,7 @@ import { popupAjaxError } from 'discourse/lib/ajax-error';
 
 export default Ember.Controller.extend({
   categories: function() {
-    return [Discourse.Category.create({ name: 'All Categories', id: 0, slug: '*'})].concat(Discourse.Category.list());
+    return [Discourse.Category.create({ name: 'Choose a Category', id: -1, slug: null}), Discourse.Category.create({ name: 'All Categories', id: 0, slug: '*'})].concat(Discourse.Category.list());
   }.property(),
 
   filters: [
@@ -17,7 +17,7 @@ export default Ember.Controller.extend({
 
   actions: {
     edit(rule) {
-      this.set( 'editing', FilterRule.create(rule.getProperties('filter', 'category_id', 'channel')));
+      this.set( 'editing', FilterRule.create(rule.getProperties('id', 'channel', 'filter', 'category_id', 'tags')));
     },
 
     save() {
@@ -26,14 +26,17 @@ export default Ember.Controller.extend({
 
       ajax("/slack/list.json", {
         method: 'POST',
-        data: rule.getProperties('filter', 'category_id', 'channel')
+        data: rule.getProperties('id', 'channel', 'filter', 'category_id', 'tags')
       }).then(() => {
         var obj = model.find((x) => ( x.get('category_id') === rule.get('category_id') && x.get('channel') === rule.get('channel') ));
         if (obj) {
+          obj.set('id', rule.channel);
           obj.set('channel', rule.channel);
           obj.set('filter', rule.filter);
+          obj.set('category_id', rule.category_id);
+          obj.set('tags', rule.tags);
         } else {
-          model.pushObject(FilterRule.create(rule.getProperties('filter', 'category_id', 'channel')));
+          model.pushObject(FilterRule.create(rule.getProperties('id', 'channel', 'filter', 'category_id', 'tags')));
         }
       }).catch(popupAjaxError);
     },
@@ -42,9 +45,9 @@ export default Ember.Controller.extend({
       const model = this.get('model');
 
       ajax("/slack/list.json", { method: 'DELETE',
-        data: rule.getProperties('filter', 'category_id', 'channel')
+        data: rule.getProperties('id')
       }).then(() => {
-        var obj = model.find((x) => ( x.get('category_id') === rule.get('category_id') && x.get('channel') === rule.get('channel') ));
+        var obj = model.find((x) => ( x.get('id') === rule.get('id') ));
         model.removeObject(obj);
       }).catch(popupAjaxError);
     },
