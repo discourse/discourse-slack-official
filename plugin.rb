@@ -54,8 +54,7 @@ after_initialize do
       rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME).where("key ~* :pat", :pat => '^category_.*')
 
       rows.each do |row|
-        data = row.value
-        ::PluginStore.cast_value(row.type_name, data).each do | rule |
+        ::PluginStore.cast_value(row.type_name, row.value).each do | rule |
           unless rule[:migrated].present? && rule[:migrated]
             id = row.key.gsub('category_', '')
             channel = rule[:channel]
@@ -264,12 +263,12 @@ after_initialize do
 
       Category.where(id: categories).each do | category |
         #why
-        get_store(category.id).each do |row|
+        get_filter(category.id).each do |row|
           text << "#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} category *#{category.name}*\n"
         end
       end
 
-      get_store('*').each do |row|
+      get_filter('*').each do |row|
         text << "#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} *all categories*\n"
       end
       cat_list = (CategoryList.new(Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)).categories.map { |category| category.slug }).join(', ')
@@ -343,10 +342,17 @@ after_initialize do
       data = { channel: channel, filter: filter, category_id: category_id, tags: tags }
 
       ::PluginStore.set(PLUGIN_NAME, "filter_#{id}", data)
+
+      ::PluginStore.set(PLUGIN_NAME, "_category_#{category_id}_#{channel}", id) if category_id.present?
+      tags.each{|t| ::PluginStore.set(PLUGIN_NAME, "_tag_#{t}_#{channel}", id)}
     end
 
     def self.update_filter(id, channel, filter, category_id = nil, tags = [])
-      data = get_store(id)
+      data = get_filter(id)
+
+      old_channel = data['channel']
+      old_category_id = data['channel']
+      old_tags = data['tags']
 
       data['filter'] = filter
       data['channel'] = channel # fix old IDs
@@ -354,14 +360,28 @@ after_initialize do
       data['tags'] = tags
 
       ::PluginStore.set(PLUGIN_NAME, "filter_#{id}", data)
+
+      ::PluginStore.remove(PLUGIN_NAME, "_category_#{old_category_id}_#{old_channel}") if old_category_id.present?
+      old_tags.each{|t| ::PluginStore.remove(PLUGIN_NAME, "_tag_#{t}_#{old_channel}")}
+      ::PluginStore.set(PLUGIN_NAME, "_category_#{category_id}_#{channel}", id) if category_id.present?
+      tags.each{|t| ::PluginStore.set(PLUGIN_NAME, "_tag_#{t}_#{channel}", id)}
     end
 
     def self.delete_filter(id)
       ::PluginStore.remove(PLUGIN_NAME, "filter_#{id}")
+      ::PluginStoreRow.where(plugin_name: PLUGIN_NAME, value: id).where("key ~* :pat", :pat => '^_.*').destroy_all
     end
 
-    def self.get_store(id)
-      (::PluginStore.get(PLUGIN_NAME, "filter_#{id}") || [])
+    def self.get_filter(id)
+      (::PluginStore.get(PLUGIN_NAME, "filter_#{id}") || Hash.new)
+    end
+
+    def self.get_category_store(id)
+      ::PluginStoreRow.where(plugin_name: PLUGIN_NAME).where("key ~* :pat", :pat => "^_category_#{id}.*")
+    end
+
+    def self.get_tag_store(value)
+      ::PluginStoreRow.where(plugin_name: PLUGIN_NAME).where("key ~* :pat", :pat => "^_tag_#{value}.*")
     end
 
     def self.notify(id)
@@ -378,7 +398,12 @@ after_initialize do
       uniq_func = proc { |i| i[:channel] }
       sort_func = proc { |a, b| precedence[a] <=> precedence[b] }
 
-      items = get_store(post.topic.category_id) | get_store("*") | get_store(0)
+      rows = get_category_store(post.topic.category_id) | get_category_store("*") | get_category_store(0)
+      post.topic.tags.each do |tag|
+        rows.push(get_tag_store(tag))
+      end
+      ids = rows.map{|r| r[:value]}
+      items = ids.collect{|i| get_filter(i)}
       responses = []
 
       items.sort_by(&sort_func).uniq(&uniq_func).each do | i |

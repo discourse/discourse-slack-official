@@ -28,7 +28,7 @@ export default Ember.Controller.extend({
         method: 'POST',
         data: rule.getProperties('id', 'channel', 'filter', 'category_id', 'tags')
       }).then(() => {
-        var obj = model.find((x) => ( x.get('category_id') === rule.get('category_id') && x.get('channel') === rule.get('channel') ));
+        var obj = model.find((x) => ( x.get('id') === rule.get('id') ));
         if (obj) {
           obj.set('id', rule.channel);
           obj.set('channel', rule.channel);
