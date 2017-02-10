@@ -176,6 +176,7 @@ after_initialize do
               render json: { text: "I can't find the *#{tag_name}* tag." }
             end
           else
+            cat_name = name
             category = Category.find_by({slug: cat_name})
             category_id = -1
             category_id = 0 if (cat_name.casecmp("all") === 0)
