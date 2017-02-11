@@ -51,7 +51,6 @@ after_initialize do
     end
 
     def list
-      return render json: { text: DiscourseSlack::Slack.status, link_names: 1 }
       rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME).where("key ~* :pat", :pat => '^category_.*')
 
       rows.each do |row|
@@ -114,6 +113,7 @@ after_initialize do
 
     # "0" on the client is usde to represent "all categories" - "*" on the server, to support old versions of the plugin.
     def edit
+      return render json: { message: "Error"}, status: 500 if params[:channel] == '' || !is_number?(params[:category_id])
       category_id = params[:category_id]
       category_id = "*" if category_id === "0"
       category_id = nil if category_id === "-1"
