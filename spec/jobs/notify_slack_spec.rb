@@ -1,8 +1,10 @@
 require 'rails_helper'
 
 describe Jobs::NotifySlack do
-  site_setting("slack_outbound_webhook_url", "https://hooks.slack.com/services/abcde")
-  site_setting("slack_enabled", true)
+  before do
+    SiteSetting.slack_outbound_webhook_url = "https://hooks.slack.com/services/abcde"
+    SiteSetting.slack_enabled = true
+  end
 
   before do
     FakeWeb.register_uri(:post, SiteSetting.slack_outbound_webhook_url, :body => "success")
