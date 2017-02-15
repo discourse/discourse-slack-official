@@ -6,14 +6,17 @@ export default RestModel.extend({
   filter: null,
 
   category: function() {
-    var id = this.get('category_id');
+    var id = parseInt(this.get('category_id'));
 
-    if (id === 0 || id === "0")
-      return Discourse.Category.create({ name: 'All Categories', id: 0 });
-    else if (id === -1 || id === "-1")
-      return Discourse.Category.create({ name: null, id: -1 });
-    else {
-      return Discourse.Category.findById(id) || { id: id, name: 'Deleted Category' };
+    switch (id === 0) {
+      case 0:  
+        return Discourse.Category.create({ name: 'All Categories', id: 0 });
+        break;
+      case -1:
+        return Discourse.Category.create({ name: null, id: -1 });
+        break;
+      default:
+        return Discourse.Category.findById(id) || { id: id, name: 'Deleted Category' };
     }
   }.property('category_id'),
 
