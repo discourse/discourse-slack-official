@@ -368,8 +368,10 @@ after_initialize do
 
     def self.absolute(raw)
       url = URI(raw) rescue nil # No icon URL if not valid
-      url.host = Discourse.current_hostname if url != nil && !(url.host)
-      url.scheme = (SiteSetting.force_https ? "https" : "http") if url != nil && !(url.scheme)
+      if url && url.scheme != 'mailto'
+        url.host = Discourse.current_hostname if !(url.host)
+        url.scheme = (SiteSetting.force_https ? "https" : "http") if !(url.scheme)
+      end
       url
     end
 
