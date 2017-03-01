@@ -1,9 +1,11 @@
 require 'rails_helper'
 
 describe 'Slack' do
-  site_setting("slack_outbound_webhook_url", "https://hooks.slack.com/services/abcde")
-  site_setting("slack_enabled", true)
-  site_setting("post_to_slack_window_secs", 20)
+  before do
+    SiteSetting.slack_outbound_webhook_url = "https://hooks.slack.com/services/abcde"
+    SiteSetting.slack_enabled = true
+    SiteSetting.post_to_slack_window_secs = 20
+  end
 
   let(:first_post) { Fabricate(:post) }
   let(:topic) { Fabricate(:topic, posts: [first_post]) }
@@ -29,7 +31,9 @@ describe 'Slack' do
     end
 
     describe 'when plugin is not enabled' do
-      site_setting(:slack_enabled, false)
+      before do
+        SiteSetting.slack_enabled = false
+      end
 
       it 'should not schedule a job for slack post' do
         Timecop.freeze(Time.zone.now) do
