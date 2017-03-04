@@ -23,7 +23,9 @@ en:
         mute: 'Muting'
         follow: 'First post only'
         watch: 'All posts and replies'
+        search: 'Searching posts'
       future:
         mute: 'Mute notifications'
         follow: 'Notify of first post'
         watch: 'Notify of all posts and replies'
+        search: 'Searched all related posts'
