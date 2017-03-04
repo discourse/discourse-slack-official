@@ -10,7 +10,8 @@ export default Ember.Controller.extend({
   filters: [
     { id: 'watch', name: I18n.t('slack.future.watch'), icon:'exclamation-circle' },
     { id: 'follow', name: I18n.t('slack.future.follow'), icon: 'circle'},
-    { id: 'mute', name: I18n.t('slack.future.mute'), icon: 'times-circle' }
+    { id: 'mute', name: I18n.t('slack.future.mute'), icon: 'times-circle' },
+    { id: 'search', name: I18n.t('slack.future.search'), icon: 'search' }
   ],
 
   editing: FilterRule.create({}),
