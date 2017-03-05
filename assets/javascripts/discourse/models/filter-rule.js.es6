@@ -8,8 +8,8 @@ export default RestModel.extend({
   category: function() {
     var id = parseInt(this.get('category_id'));
 
-    switch (id === 0) {
-      case 0:  
+    switch (id) {
+      case 0:
         return Discourse.Category.create({ name: 'All Categories', id: 0 });
         break;
       case -1:

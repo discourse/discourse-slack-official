@@ -18,7 +18,9 @@ after_initialize do
 
   unless ::PluginStore.get(PLUGIN_NAME, "not_first_time")
     ::PluginStore.set(PLUGIN_NAME, "not_first_time", true)
-    ::PluginStore.set(PLUGIN_NAME, "category_*", [{ category_id: '0', channel: "#general", filter: "follow" }])
+    id = SecureRandom.hex(16)
+    ::PluginStore.set(PLUGIN_NAME, "filter_#{id}", { category_id: '*', channel: "#general", filter: "follow", tags: [] })
+    ::PluginStore.set(PLUGIN_NAME, "_category_*", id)
   end
 
   module ::DiscourseSlack
@@ -51,23 +53,6 @@ after_initialize do
     end
 
     def list
-      rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME).where("key ~* :pat", :pat => '^category_.*')
-
-      rows.each do |row|
-        ::PluginStore.cast_value(row.type_name, row.value).each do | rule |
-          unless rule[:migrated].present? && rule[:migrated]
-            id = row.key.gsub('category_', '')
-            channel = rule[:channel]
-            data = ::PluginStore.get(PLUGIN_NAME, "category_#{id}")
-            update = data.index {|i| i['channel'] === channel }
-            DiscourseSlack::Slack.set_filter(channel, rule[:filter], id)
-            data[update]['migrated'] = true
-            data = data.uniq { |i| i['channel'] }
-            ::PluginStore.set(PLUGIN_NAME, "category_#{id}", data.uniq)
-          end
-        end
-      end
-
       rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME).where("key ~* :pat", :pat => '^filter_.*')
       out = []
 
@@ -375,7 +360,8 @@ after_initialize do
       url
     end
 
-    def self.set_filter(channel, filter, category_id = nil, tags = [])
+    def self.set_filter(channel, filter, category_id = nil, tags = nil)
+      tags = [] if tags.nil?
       id = SecureRandom.hex(16)
 
       data = { channel: channel, filter: filter, category_id: category_id, tags: tags }
@@ -491,6 +477,31 @@ after_initialize do
 
       responses
     end
+
+    def self.migrate_legacy_data
+      rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME).where("key ~* :pat", :pat => '^category_.*')
+
+      rows.each do |row|
+        ::PluginStore.cast_value(row.type_name, row.value).each do | rule |
+          unless rule[:migrated].present? && rule[:migrated]
+            id = row.key.gsub('category_', '')
+            channel = rule[:channel]
+            data = ::PluginStore.get(PLUGIN_NAME, "category_#{id}")
+            update = data.index {|i| i['channel'] === channel }
+            DiscourseSlack::Slack.set_filter(channel, rule[:filter], id)
+            data[update]['migrated'] = true
+            data = data.uniq { |i| i['channel'] }
+            ::PluginStore.set(PLUGIN_NAME, "category_#{id}", data.uniq)
+          end
+        end
+      end
+    end
+
+  end
+
+  unless ::PluginStore.get(PLUGIN_NAME, "legacy_migrated")
+    ::PluginStore.set(PLUGIN_NAME, "legacy_migrated", true)
+    DiscourseSlack::Slack.migrate_legacy_data
   end
 
   DiscourseEvent.on(:post_created) do |post|
