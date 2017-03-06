@@ -17,10 +17,10 @@ register_asset "stylesheets/slack_admin.scss"
 after_initialize do
 
   unless ::PluginStore.get(PLUGIN_NAME, "not_first_time")
-    ::PluginStore.set(PLUGIN_NAME, "not_first_time", true)
     id = SecureRandom.hex(16)
     ::PluginStore.set(PLUGIN_NAME, "filter_#{id}", { category_id: '*', channel: "#general", filter: "follow", tags: [] })
     ::PluginStore.set(PLUGIN_NAME, "_category_*", id)
+    ::PluginStore.set(PLUGIN_NAME, "not_first_time", true)
   end
 
   module ::DiscourseSlack
@@ -370,6 +370,7 @@ after_initialize do
 
       ::PluginStore.set(PLUGIN_NAME, "_category_#{category_id}_#{channel}", id) if category_id.present?
       tags.each{|t| ::PluginStore.set(PLUGIN_NAME, "_tag_#{t}_#{channel}", id)}
+      return id
     end
 
     def self.update_filter(id, channel, filter, category_id = nil, tags = [])
@@ -487,7 +488,7 @@ after_initialize do
             id = row.key.gsub('category_', '')
             channel = rule[:channel]
             data = ::PluginStore.get(PLUGIN_NAME, "category_#{id}")
-            update = data.index {|i| i['channel'] === channel }
+            update = data.index { |i| i['channel'] === channel }
             DiscourseSlack::Slack.set_filter(channel, rule[:filter], id)
             data[update]['migrated'] = true
             data = data.uniq { |i| i['channel'] }
@@ -500,8 +501,8 @@ after_initialize do
   end
 
   unless ::PluginStore.get(PLUGIN_NAME, "legacy_migrated")
-    ::PluginStore.set(PLUGIN_NAME, "legacy_migrated", true)
     DiscourseSlack::Slack.migrate_legacy_data
+    ::PluginStore.set(PLUGIN_NAME, "legacy_migrated", true)
   end
 
   DiscourseEvent.on(:post_created) do |post|
