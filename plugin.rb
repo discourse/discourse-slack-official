@@ -16,10 +16,12 @@ register_asset "stylesheets/slack_admin.scss"
 
 after_initialize do
 
+  PluginStoreRow.where(plugin_name: PLUGIN_NAME).destroy_all
+
   unless ::PluginStore.get(PLUGIN_NAME, "not_first_time")
     id = SecureRandom.hex(16)
     ::PluginStore.set(PLUGIN_NAME, "filter_#{id}", { category_id: '*', channel: "#general", filter: "follow", tags: [] })
-    ::PluginStore.set(PLUGIN_NAME, "_category_*", id)
+    ::PluginStore.set(PLUGIN_NAME, "_category_*_#general", id)
     ::PluginStore.set(PLUGIN_NAME, "not_first_time", true)
   end
 
@@ -146,13 +148,13 @@ after_initialize do
             tag_name = name.sub! 'tag:', ''
             tag = Tag.find_by({name: tag_name})
             if tag
-              row = ::PluginStoreRow.find_by({plugin_name: PLUGIN_NAME, key: "_tag_#{tag.name}_#{channel}"})
+              row = ::PluginStoreRow.find_by(plugin_name: PLUGIN_NAME, key: "_tag_#{tag.name}_#{channel}")
               if row
-                data = get_filter(row.value)
+                data = DiscourseSlack::Slack.get_filter(row.value)
                 unless data['filter'] === cmd
                   data['tags'] = data['tags'].delete(tag.name)
                   ::PluginStore.set(PLUGIN_NAME, "filter_#{row.value}", data)
-                  ::PluginStore.remove(PLUGIN_NAME, "_tag_#{tag.name}_#{channel}")
+                  row.destroy
                 end
               end
               DiscourseSlack::Slack.set_filter(channel, cmd, nil, [tag.name])
@@ -163,21 +165,21 @@ after_initialize do
           else
             cat_name = name
             category = Category.find_by({slug: cat_name})
-            category_id = -1
-            category_id = 0 if (cat_name.casecmp("all") === 0)
+            category_id = "-1"
+            category_id = "*" if (cat_name.casecmp("all") === 0)
             category_id = category.id if (category && guardian.can_see_category?(category))
-            if category_id > -1
-              row = ::PluginStoreRow.find_by({plugin_name: PLUGIN_NAME, key: "_category_#{category_id}_#{channel}"})
+            unless category_id === "-1"
+              row = ::PluginStoreRow.find_by(plugin_name: PLUGIN_NAME, key: "_category_#{category_id}_#{channel}")
               if row
-                data = get_filter(row.value)
+                data = DiscourseSlack::Slack.get_filter(row.value)
                 unless data['filter'] === cmd
                   data['category_id'] = nil
                   ::PluginStore.set(PLUGIN_NAME, "filter_#{row.value}", data)
-                  ::PluginStore.remove(PLUGIN_NAME, "_category_#{category_id}_#{channel}")
+                  row.destroy
                 end
               end
               DiscourseSlack::Slack.set_filter(channel, cmd, category_id)
-              if category_id == 0
+              if category_id === "*"
                 render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize} all categories* on this channel." }
               else
                 render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize}* category *#{category.name}*" }

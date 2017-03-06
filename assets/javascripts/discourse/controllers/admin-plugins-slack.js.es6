@@ -4,7 +4,10 @@ import { popupAjaxError } from 'discourse/lib/ajax-error';
 
 export default Ember.Controller.extend({
   categories: function() {
-    return [Discourse.Category.create({ name: 'Choose a Category', id: -1, slug: null}), Discourse.Category.create({ name: 'All Categories', id: 0, slug: '*'})].concat(Discourse.Category.list());
+    return [
+      Discourse.Category.create({ name: I18n.t('slack.choose.category'), id: -1, slug: null}),
+      Discourse.Category.create({ name: I18n.t('slack.choose.all_categories'), id: 0, slug: '*'})
+    ].concat(Discourse.Category.list());
   }.property(),
 
   filters: [
@@ -30,11 +33,7 @@ export default Ember.Controller.extend({
       }).then(() => {
         var obj = model.find((x) => ( x.get('id') === rule.get('id') ));
         if (obj) {
-          obj.set('id', rule.channel);
-          obj.set('channel', rule.channel);
-          obj.set('filter', rule.filter);
-          obj.set('category_id', rule.category_id);
-          obj.set('tags', rule.tags);
+          obj.setProperties({ id: rule.channel, channel: rule.channel, filter: rule.filter, category_id: rule.category_id, tags: rule.tags});
         } else {
           model.pushObject(FilterRule.create(rule.getProperties('id', 'channel', 'filter', 'category_id', 'tags')));
         }

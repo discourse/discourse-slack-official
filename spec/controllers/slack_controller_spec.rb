@@ -108,6 +108,46 @@ describe ::DiscourseSlack::SlackController do
 
     end
 
+    context 'command' do
+
+      before do
+        SiteSetting.slack_incoming_webhook_token = "SECRET TOKEN"
+      end
+
+      it 'should create filter to follow a category on slack' do
+        category = Fabricate(:category)
+        expect {
+          xhr :post, :command, {text: "follow #{category.slug}", channel_name: "welcome", token: "SECRET TOKEN"}
+          expect(response).to be_success
+        }.to change(PluginStoreRow, :count).by(2)
+      end
+
+      it 'should create filter to watch a tag on slack' do
+        tag = Fabricate(:tag)
+        expect {
+          xhr :post, :command, {text: "watch tag:#{tag.name}", channel_name: "welcome", token: "SECRET TOKEN"}
+          expect(response).to be_success
+        }.to change(PluginStoreRow, :count).by(2)
+      end
+
+      it 'should remove filter to mute a category on slack' do
+        expect {
+          xhr :post, :command, {text: "mute all", channel_name: "general", token: "SECRET TOKEN"}
+          expect(response).to be_success
+        }.to change(PluginStoreRow, :count).by(1)
+      end
+
+      it 'should remove filter to mute a tag on slack' do
+        tag = Fabricate(:tag)
+        xhr :post, :command, {text: "watch tag:#{tag.name}", channel_name: "welcome", token: "SECRET TOKEN"}
+        expect {
+          xhr :post, :command, {text: "mute tag:#{tag.name}", channel_name: "welcome", token: "SECRET TOKEN"}
+          expect(response).to be_success
+        }.to change(PluginStoreRow, :count).by(1)
+      end
+
+    end
+
   end
 
 end
