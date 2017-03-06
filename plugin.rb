@@ -371,7 +371,7 @@ after_initialize do
       ::PluginStore.set(PLUGIN_NAME, "filter_#{id}", data)
 
       ::PluginStore.set(PLUGIN_NAME, "_category_#{category_id}_#{channel}", id) if category_id.present?
-      tags.each{|t| ::PluginStore.set(PLUGIN_NAME, "_tag_#{t}_#{channel}", id)}
+      tags.each{ |t| ::PluginStore.set(PLUGIN_NAME, "_tag_#{t}_#{channel}", id) }
       return id
     end
 
@@ -428,10 +428,11 @@ after_initialize do
 
       rows = get_category_store(post.topic.category_id) | get_category_store("*") | get_category_store(0)
       post.topic.tags.each do |tag|
-        rows.push(get_tag_store(tag))
+        rows = rows + get_tag_store(tag.name)
       end
-      ids = rows.map{|r| r[:value]}
-      items = ids.collect{|i| get_filter(i)}
+
+      ids = rows.map { |r| r.value unless r.nil? }
+      items = ids.collect { |i| get_filter(i) }
       responses = []
 
       items.sort_by(&sort_func).uniq(&uniq_func).each do | i |
