@@ -286,7 +286,7 @@ after_initialize do
           end
         end
         tags = row['tags']
-        if tags.present? && tags.any?
+        unless tags.nil? || tags.empty?
           tags_text = tags.join(',')
           text << "\n#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} tags *#{tags_text}*\n"
         end
