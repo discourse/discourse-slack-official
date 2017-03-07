@@ -185,7 +185,6 @@ after_initialize do
                 render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize}* category *#{category.name}*" }
               end
             else
-              # TODO DRY (easy)
               cat_list = (CategoryList.new(Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)).categories.map { |c| c.slug }).join(', ')
               render json: { text: "I can't find the *#{tokens[1]}* category. Did you mean: #{cat_list}" }
             end
