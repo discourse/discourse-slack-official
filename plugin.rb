@@ -141,41 +141,22 @@ after_initialize do
       case cmd
       when "watch", "follow", "mute"
         if (tokens.size == 2)
-          name = tokens[1]
-          if name.start_with?('tag:')
-            name.sub! 'tag:', ''
-            tag = Tag.find_by({name: name})
-            if tag
-              row = ::PluginStoreRow.find_by(plugin_name: PLUGIN_NAME, key: "_tag_#{tag.name}_#{channel}")
-              if row
-                data = DiscourseSlack::Slack.get_filter(row.value)
-                unless data['filter'] === cmd
-                  data['tags'] = data['tags'].delete(tag.name)
-                  ::PluginStore.set(PLUGIN_NAME, "filter_#{row.value}", data)
-                  row.destroy
-                end
-              end
-              DiscourseSlack::Slack.set_filter(channel, cmd, nil, [tag.name])
-              render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize}* tag *#{tag.name}*" }
-            else
-              render json: { text: "I can't find the *#{name}* tag." }
-            end
+          value = tokens[1]
+          filter_exist = false
+          if value.start_with?('tag:')
+            value.sub! 'tag:', ''
+            tag = Tag.find_by({name: value})
+            return render json: { text: "I can't find the *#{value}* tag." } unless tag
+
+            execute(channel, cmd, value, 'tag')
+            render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize}* tag *#{tag.name}*" }
           else
-            category = Category.find_by({slug: name})
+            category = Category.find_by({slug: value})
             category_id = "-1"
-            category_id = "*" if (name.casecmp("all") === 0)
+            category_id = "*" if (value.casecmp("all") === 0)
             category_id = category.id if (category && guardian.can_see_category?(category))
             unless category_id === "-1"
-              row = ::PluginStoreRow.find_by(plugin_name: PLUGIN_NAME, key: "_category_#{category_id}_#{channel}")
-              if row
-                data = DiscourseSlack::Slack.get_filter(row.value)
-                unless data['filter'] === cmd
-                  data['category_id'] = nil
-                  ::PluginStore.set(PLUGIN_NAME, "filter_#{row.value}", data)
-                  row.destroy
-                end
-              end
-              DiscourseSlack::Slack.set_filter(channel, cmd, category_id)
+              execute(channel, cmd, category_id, 'category')
               if category_id === "*"
                 render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize} all categories* on this channel." }
               else
@@ -248,6 +229,48 @@ after_initialize do
 
     def redirect_to_login_if_required
     end
+
+private
+
+        def execute(channel, command, value, type)
+          category_id = type === "category" ? value : nil
+          tags = type === "tag" ? [value] : []
+          filter_exist = false
+          row = ::PluginStoreRow.find_by(plugin_name: PLUGIN_NAME, key: "_#{type}_#{value}_#{channel}")
+          if row
+            data = DiscourseSlack::Slack.get_filter(row.value)
+            if data
+              unless data['filter'] === command
+                overwritable = false
+                if type === "tag"
+                  if data['tags'].count > 1 || data['category_id'].present?
+                    data['tags'] = data['tags'].delete(tag.name)
+                    row.destroy
+                  else
+                    overwritable = true
+                  end
+                elsif type === "category"
+                  unless data['tags'].empty?
+                    data['category_id'] = nil
+                    row.destroy
+                  else
+                    overwritable = true
+                  end
+                end
+                if overwritable
+                  data['filter'] = command
+                  filter_exist = true
+                end
+                ::PluginStore.set(PLUGIN_NAME, "filter_#{row.value}", data)
+              else
+                filter_exist = true
+              end
+            else
+              row.destroy
+            end
+          end
+          DiscourseSlack::Slack.set_filter(channel, command, category_id, tags) unless filter_exist
+        end
   end
 
   class ::DiscourseSlack::Slack

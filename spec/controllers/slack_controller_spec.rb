@@ -138,7 +138,7 @@ describe ::DiscourseSlack::SlackController do
         expect {
           xhr :post, :command, { text: "mute all", channel_name: "general", token: "SECRET TOKEN" }
           expect(response).to be_success
-        }.to change(PluginStoreRow, :count).by(1)
+        }.to change(PluginStoreRow, :count).by(0)
       end
 
       it 'should remove filter to mute a tag on slack' do
@@ -148,7 +148,7 @@ describe ::DiscourseSlack::SlackController do
         expect {
           xhr :post, :command, { text: "mute tag:#{tag.name}", channel_name: "welcome", token: "SECRET TOKEN" }
           expect(response).to be_success
-        }.to change(PluginStoreRow, :count).by(1)
+        }.to change(PluginStoreRow, :count).by(0)
       end
 
     end
