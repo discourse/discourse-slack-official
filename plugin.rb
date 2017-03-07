@@ -245,14 +245,12 @@ private
                 if type === "tag"
                   if data['tags'].count > 1 || data['category_id'].present?
                     data['tags'] = data['tags'].delete(tag.name)
-                    row.destroy
                   else
                     overwritable = true
                   end
                 elsif type === "category"
                   unless data['tags'].empty?
                     data['category_id'] = nil
-                    row.destroy
                   else
                     overwritable = true
                   end
@@ -265,8 +263,6 @@ private
               else
                 filter_exist = true
               end
-            else
-              row.destroy
             end
           end
           DiscourseSlack::Slack.set_filter(channel, command, category_id, tags) unless filter_exist
