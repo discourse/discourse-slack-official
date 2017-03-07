@@ -13,13 +13,13 @@ describe ::DiscourseSlack::SlackController do
   context "when logged in" do
     let!(:user) { log_in(:admin) }
 
-    it "default filters" do
+    it "checking existence of default filters" do
       expect(PluginStoreRow.where(plugin_name: PLUGIN_NAME).count).to eq(4)
       expect(PluginStore.get(PLUGIN_NAME, "not_first_time")).to eq(true)
       expect(PluginStore.get(PLUGIN_NAME, "legacy_migrated")).to eq(true)
     end
 
-    context '.index' do
+    context '#index' do
       it "returns a list of filters" do
         xhr :get, :list
         expect(response).to be_success
@@ -28,26 +28,27 @@ describe ::DiscourseSlack::SlackController do
       end
     end
 
-    context '.create' do
+    context '#create' do
       it "creates a filter" do
         expect {
-          xhr :post, :edit, {channel: '#hello', category_id: 1, filter: 'follow'}
+          xhr :post, :edit, { channel: '#hello', category_id: 1, filter: 'follow' }
           expect(response).to be_success
         }.to change(PluginStoreRow, :count).by(2)
       end
 
       it "creates a filter with tags" do
         expect {
-          xhr :post, :edit, {channel: '#welcome', category_id: 2, filter: 'follow', tags: ["test", "example"]}
+          xhr :post, :edit, { channel: '#welcome', category_id: 2, filter: 'follow', tags: ["test", "example"] }
           expect(response).to be_success
         }.to change(PluginStoreRow, :count).by(4)
       end
     end
 
-    context '.destroy' do
+    context '#destroy' do
 
       it "deletes the filter" do
         id = ::DiscourseSlack::Slack.set_filter("#hello", "follow", 1)
+
         expect {
           xhr :delete, :delete, id: id
           expect(response).to be_success
@@ -56,6 +57,7 @@ describe ::DiscourseSlack::SlackController do
 
       it "deletes the filter with tags" do
         id = ::DiscourseSlack::Slack.set_filter("#hello", "follow", 1, ["test", "example"])
+
         expect {
           xhr :delete, :delete, id: id
           expect(response).to be_success
@@ -64,25 +66,25 @@ describe ::DiscourseSlack::SlackController do
 
     end
 
-    context '.update' do
+    context '#update' do
 
       it "updates the filter with tags" do
         id = ::DiscourseSlack::Slack.set_filter("#hello", "follow", 1)
         new_channel = "welcome"
         new_category_id = "2"
         new_tags = ["test", "example"]
-        xhr :post, :edit, {id: id, channel: new_channel, category_id: new_category_id, filter: 'watch', tags: new_tags}
+        xhr :post, :edit, { id: id, channel: new_channel, category_id: new_category_id, filter: 'watch', tags: new_tags }
         expect(response).to be_success
         filter = ::DiscourseSlack::Slack.get_filter(id)
         expect(filter[:channel]).to eq(new_channel)
         expect(filter[:category_id]).to eq(new_category_id)
         expect(filter[:filter]).to eq('watch')
         expect(filter[:tags]).to eq(new_tags)
-        cid = ::PluginStore.get(PLUGIN_NAME, "_category_#{new_category_id}_#{new_channel}")
-        expect(cid).to eq(id)
+        value = ::PluginStore.get(PLUGIN_NAME, "_category_#{new_category_id}_#{new_channel}")
+        expect(value).to eq(id)
         new_tags.each do |t|
-          tid = ::PluginStore.get(PLUGIN_NAME, "_tag_#{t}_#{new_channel}")
-          expect(tid).to eq(id)
+          value = ::PluginStore.get(PLUGIN_NAME, "_tag_#{t}_#{new_channel}")
+          expect(value).to eq(id)
         end
       end
 
@@ -91,18 +93,18 @@ describe ::DiscourseSlack::SlackController do
         id = ::DiscourseSlack::Slack.set_filter("#hello", "follow", 1, tags)
         new_channel = "welcome"
         new_category_id = "2"
-        xhr :post, :edit, {id: id, channel: new_channel, category_id: new_category_id, filter: 'watch', tags: []}
+        xhr :post, :edit, { id: id, channel: new_channel, category_id: new_category_id, filter: 'watch', tags: [] }
         expect(response).to be_success
         filter = ::DiscourseSlack::Slack.get_filter(id)
         expect(filter[:channel]).to eq(new_channel)
         expect(filter[:category_id]).to eq(new_category_id)
         expect(filter[:filter]).to eq('watch')
         expect(filter[:tags]).to eq([])
-        cid = ::PluginStore.get(PLUGIN_NAME, "_category_#{new_category_id}_#{new_channel}")
-        expect(cid).to eq(id)
+        value = ::PluginStore.get(PLUGIN_NAME, "_category_#{new_category_id}_#{new_channel}")
+        expect(value).to eq(id)
         tags.each do |t|
-          tid = ::PluginStore.get(PLUGIN_NAME, "_tag_#{t}_#{new_channel}")
-          expect(tid).to eq(nil)
+          value = ::PluginStore.get(PLUGIN_NAME, "_tag_#{t}_#{new_channel}")
+          expect(value).to eq(nil)
         end
       end
 
@@ -116,32 +118,35 @@ describe ::DiscourseSlack::SlackController do
 
       it 'should create filter to follow a category on slack' do
         category = Fabricate(:category)
+
         expect {
-          xhr :post, :command, {text: "follow #{category.slug}", channel_name: "welcome", token: "SECRET TOKEN"}
+          xhr :post, :command, { text: "follow #{category.slug}", channel_name: "welcome", token: "SECRET TOKEN" }
           expect(response).to be_success
         }.to change(PluginStoreRow, :count).by(2)
       end
 
       it 'should create filter to watch a tag on slack' do
         tag = Fabricate(:tag)
+
         expect {
-          xhr :post, :command, {text: "watch tag:#{tag.name}", channel_name: "welcome", token: "SECRET TOKEN"}
+          xhr :post, :command, { text: "watch tag:#{tag.name}", channel_name: "welcome", token: "SECRET TOKEN" }
           expect(response).to be_success
         }.to change(PluginStoreRow, :count).by(2)
       end
 
       it 'should remove filter to mute a category on slack' do
         expect {
-          xhr :post, :command, {text: "mute all", channel_name: "general", token: "SECRET TOKEN"}
+          xhr :post, :command, { text: "mute all", channel_name: "general", token: "SECRET TOKEN" }
           expect(response).to be_success
         }.to change(PluginStoreRow, :count).by(1)
       end
 
       it 'should remove filter to mute a tag on slack' do
         tag = Fabricate(:tag)
-        xhr :post, :command, {text: "watch tag:#{tag.name}", channel_name: "welcome", token: "SECRET TOKEN"}
+        xhr :post, :command, { text: "watch tag:#{tag.name}", channel_name: "welcome", token: "SECRET TOKEN" }
+
         expect {
-          xhr :post, :command, {text: "mute tag:#{tag.name}", channel_name: "welcome", token: "SECRET TOKEN"}
+          xhr :post, :command, { text: "mute tag:#{tag.name}", channel_name: "welcome", token: "SECRET TOKEN" }
           expect(response).to be_success
         }.to change(PluginStoreRow, :count).by(1)
       end

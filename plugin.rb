@@ -16,8 +16,6 @@ register_asset "stylesheets/slack_admin.scss"
 
 after_initialize do
 
-  PluginStoreRow.where(plugin_name: PLUGIN_NAME).destroy_all
-
   unless ::PluginStore.get(PLUGIN_NAME, "not_first_time")
     id = SecureRandom.hex(16)
     ::PluginStore.set(PLUGIN_NAME, "filter_#{id}", { category_id: '*', channel: "#general", filter: "follow", tags: [] })
@@ -145,8 +143,8 @@ after_initialize do
         if (tokens.size == 2)
           name = tokens[1]
           if name.start_with?('tag:')
-            tag_name = name.sub! 'tag:', ''
-            tag = Tag.find_by({name: tag_name})
+            name.sub! 'tag:', ''
+            tag = Tag.find_by({name: name})
             if tag
               row = ::PluginStoreRow.find_by(plugin_name: PLUGIN_NAME, key: "_tag_#{tag.name}_#{channel}")
               if row
@@ -160,13 +158,12 @@ after_initialize do
               DiscourseSlack::Slack.set_filter(channel, cmd, nil, [tag.name])
               render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize}* tag *#{tag.name}*" }
             else
-              render json: { text: "I can't find the *#{tag_name}* tag." }
+              render json: { text: "I can't find the *#{name}* tag." }
             end
           else
-            cat_name = name
-            category = Category.find_by({slug: cat_name})
+            category = Category.find_by({slug: name})
             category_id = "-1"
-            category_id = "*" if (cat_name.casecmp("all") === 0)
+            category_id = "*" if (name.casecmp("all") === 0)
             category_id = category.id if (category && guardian.can_see_category?(category))
             unless category_id === "-1"
               row = ::PluginStoreRow.find_by(plugin_name: PLUGIN_NAME, key: "_category_#{category_id}_#{channel}")
@@ -185,7 +182,7 @@ after_initialize do
                 render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize}* category *#{category.name}*" }
               end
             else
-              cat_list = (CategoryList.new(Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)).categories.map { |c| c.slug }).join(', ')
+              cat_list = (CategoryList.new(guardian).categories.map { |c| c.slug }).join(', ')
               render json: { text: "I can't find the *#{tokens[1]}* category. Did you mean: #{cat_list}" }
             end
           end
@@ -301,7 +298,7 @@ after_initialize do
 
     def self.help
       %(
-      `/discourse [watch|follow|mute|help|status] [category|tag:slug|all]`
+      `/discourse [watch|follow|mute|help|status] [category|tag:name|all]`
 *watch* – notify this channel for new topics and new replies
 *follow* – notify this channel for new topics
 *mute* – stop notifying this channel
@@ -371,10 +368,11 @@ after_initialize do
 
       ::PluginStore.set(PLUGIN_NAME, "_category_#{category_id}_#{channel}", id) if category_id.present?
       tags.each{ |t| ::PluginStore.set(PLUGIN_NAME, "_tag_#{t}_#{channel}", id) }
-      return id
+      id
     end
 
-    def self.update_filter(id, channel, filter, category_id = nil, tags = [])
+    def self.update_filter(id, channel, filter, category_id = nil, tags = nil)
+      tags = [] if tags.nil?
       data = get_filter(id)
 
       old_channel = data['channel']
@@ -382,7 +380,7 @@ after_initialize do
       old_tags = data['tags']
 
       data['filter'] = filter
-      data['channel'] = channel # fix old IDs
+      data['channel'] = channel
       data['category_id'] = category_id
       data['tags'] = tags
 
@@ -430,7 +428,7 @@ after_initialize do
         rows = rows + get_tag_store(tag.name)
       end
 
-      ids = rows.map { |r| r.value unless r.nil? }
+      ids = rows.map(&:value).compact
       items = ids.collect { |i| get_filter(i) }
       responses = []
 

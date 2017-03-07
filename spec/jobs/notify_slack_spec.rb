@@ -20,7 +20,7 @@ describe Jobs::NotifySlack do
       expect(response[0]).to eq("success")
     end
 
-    it 'should send notification only for particular category topic' do
+    it "only if topic's category have a filter" do
       ::PluginStoreRow.find_by(plugin_name: PLUGIN_NAME, key: "_category_*_#general").destroy
       category = Fabricate(:category)
       topic = Fabricate(:topic, category_id: category.id, posts: [post])
@@ -31,7 +31,7 @@ describe Jobs::NotifySlack do
       expect(response[0]).to eq("success")
     end
 
-    it 'should send notification only for particular tag topic' do
+    it "only if topic's tag have a filter" do
       ::PluginStoreRow.find_by(plugin_name: PLUGIN_NAME, key: "_category_*_#general").destroy
       SiteSetting.tagging_enabled = true
       tag = Fabricate(:tag)
