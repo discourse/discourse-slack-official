@@ -22,7 +22,6 @@ describe ::DiscourseSlack::SlackController do
         xhr :get, :list
         expect(response).to be_success
         json = ::JSON.parse(response.body)
-        expect(json['slack']).to be_present
         expect(json['slack'].count).to eq(1)
       end
     end
@@ -30,8 +29,14 @@ describe ::DiscourseSlack::SlackController do
     context '#create' do
       it "creates a filter" do
         expect {
-          xhr :post, :edit, { channel: '#hello', category_id: 1, filter: 'follow' }
+          channel, category_id, filter = "#hello", "1", "follow"
+          xhr :post, :edit, { channel: channel, category_id: category_id, filter: filter }
           expect(response).to be_success
+          id = PluginStore.get(PLUGIN_NAME, "_category_#{category_id}_#{channel}")
+          data = PluginStore.get(PLUGIN_NAME, "filter_#{id}")
+          expect(data[:channel]).to eq(channel)
+          expect(data[:category_id]).to eq(category_id)
+          expect(data[:filter]).to eq(filter)
         }.to change(PluginStoreRow, :count).by(2)
       end
 
