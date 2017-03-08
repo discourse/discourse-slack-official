@@ -1,7 +1,7 @@
 import RestModel from 'discourse/models/rest';
 
 export default RestModel.extend({
-  category_id: -1,
+  category_id: '',
   channel: '',
   filter: null,
 
@@ -12,12 +12,11 @@ export default RestModel.extend({
       case '*':
         return Discourse.Category.create({ name: I18n.t('slack.choose.all_categories'), id: '*' });
         break;
+      case '':
+        return Discourse.Category.create({ name: '', id: '' });
+        break;
       default:
-        if (id) {
-          return Discourse.Category.create({ name: null, id: null });
-        } else {
-          return Discourse.Category.findById(id) || { id: id, name: 'Deleted Category' };
-        }
+        return Discourse.Category.findById(id) || { name: I18n.t('slack.choose.deleted_category'), id: id };
     }
   }.property('category_id'),
 

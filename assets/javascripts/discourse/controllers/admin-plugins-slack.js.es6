@@ -5,7 +5,7 @@ import { popupAjaxError } from 'discourse/lib/ajax-error';
 export default Ember.Controller.extend({
   categories: function() {
     return [
-      Discourse.Category.create({ name: I18n.t('slack.choose.category'), id: null }),
+      Discourse.Category.create({ name: I18n.t('slack.choose.category'), id: '' }),
       Discourse.Category.create({ name: I18n.t('slack.choose.all_categories'), id: '*' })
     ].concat(Discourse.Category.list());
   }.property(),

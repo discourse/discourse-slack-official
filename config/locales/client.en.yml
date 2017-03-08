@@ -15,6 +15,7 @@ en:
       save: 'Save'
       choose:
         all_categories: 'All categories'
+        deleted_category: 'Deleted category'
         filter: 'Choose a filter'
         category: 'Choose a category'
         tags: 'Choose tags'

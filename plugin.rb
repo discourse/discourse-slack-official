@@ -93,7 +93,7 @@ after_initialize do
 
     # "0" on the client is usde to represent "all categories" - "*" on the server, to support old versions of the plugin.
     def edit
-      return render json: { message: "Error"}, status: 500 if params[:channel] == '' || (params[:category_id].nil? && (params[:tags].nil? || params[:tags].empty?))
+      return render json: { message: "Error"}, status: 500 if params[:channel] == '' || (params[:category_id].blank? && params[:tags].blank?)
       category_id = params[:category_id]
       if params[:id].present?
         DiscourseSlack::Slack.update_filter(params[:id], params[:channel], params[:filter], category_id, params[:tags])
@@ -145,10 +145,10 @@ after_initialize do
             render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize}* tag *#{tag.name}*" }
           else
             category = Category.find_by({slug: value})
-            category_id = nil
+            category_id = ''
             category_id = "*" if (value.casecmp("all") === 0)
             category_id = category.id if (category && guardian.can_see_category?(category))
-            unless category_id.nil?
+            unless category_id.blank?
               execute(channel, cmd, category_id, 'category')
               if category_id === "*"
                 render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize} all categories* on this channel." }
@@ -226,7 +226,7 @@ after_initialize do
 private
 
         def execute(channel, command, value, type)
-          category_id = type === "category" ? value : nil
+          category_id = type === "category" ? value : ''
           tags = type === "tag" ? [value] : []
           filter_exist = false
           row = ::PluginStoreRow.find_by(plugin_name: PLUGIN_NAME, key: "_#{type}_#{value}_#{channel}")
@@ -243,7 +243,7 @@ private
                   end
                 elsif type === "category"
                   unless data['tags'].empty?
-                    data['category_id'] = nil
+                    data['category_id'] = ''
                   else
                     overwritable = true
                   end
@@ -294,11 +294,11 @@ private
             text << "#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} *all categories*\n"
           else
             category = Category.find_by(id: category_id)
-            text << "#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} category *#{category.name}*\n" unless category.nil?
+            text << "#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} category *#{category.name}*\n" unless category.blank?
           end
         end
         tags = row['tags']
-        unless tags.nil? || tags.empty?
+        unless tags.blank?
           tags_text = tags.join(',')
           text << "\n#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} tags *#{tags_text}*\n"
         end
@@ -374,7 +374,7 @@ private
       url
     end
 
-    def self.set_filter(channel, filter, category_id = nil, tags = nil)
+    def self.set_filter(channel, filter, category_id = '', tags = [])
       tags = [] if tags.nil?
       id = SecureRandom.hex(16)
 
@@ -387,12 +387,12 @@ private
       id
     end
 
-    def self.update_filter(id, channel, filter, category_id = nil, tags = nil)
+    def self.update_filter(id, channel, filter, category_id = '', tags = [])
       tags = [] if tags.nil?
       data = get_filter(id)
 
       old_channel = data['channel']
-      old_category_id = data['channel']
+      old_category_id = data['category_id']
       old_tags = data['tags']
 
       data['filter'] = filter
@@ -402,10 +402,21 @@ private
 
       ::PluginStore.set(PLUGIN_NAME, "filter_#{id}", data)
 
-      ::PluginStore.remove(PLUGIN_NAME, "_category_#{old_category_id}_#{old_channel}") if old_category_id.present?
-      old_tags.each{|t| ::PluginStore.remove(PLUGIN_NAME, "_tag_#{t}_#{old_channel}")}
-      ::PluginStore.set(PLUGIN_NAME, "_category_#{category_id}_#{channel}", id) if category_id.present?
-      tags.each{|t| ::PluginStore.set(PLUGIN_NAME, "_tag_#{t}_#{channel}", id)}
+      channel_changed = (old_channel != channel)
+      if channel_changed
+        removed_tags = old_tags
+        added_tags = tags
+        category_changed = true
+      else
+        removed_tags = old_tags - tags
+        added_tags = tags - old_tags
+        category_changed = (old_category_id != category_id)
+      end
+
+      ::PluginStore.remove(PLUGIN_NAME, "_category_#{old_category_id}_#{old_channel}") if old_category_id.present? && category_changed
+      ::PluginStore.set(PLUGIN_NAME, "_category_#{category_id}_#{channel}", id) if category_id.present? && category_changed
+      removed_tags.each{|t| ::PluginStore.remove(PLUGIN_NAME, "_tag_#{t}_#{old_channel}")}
+      added_tags.each{|t| ::PluginStore.set(PLUGIN_NAME, "_tag_#{t}_#{channel}", id)}
     end
 
     def self.delete_filter(id)
