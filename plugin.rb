@@ -8,22 +8,19 @@ require 'net/http'
 require 'json'
 require File.expand_path('../lib/validators/discourse_slack_enabled_setting_validator.rb', __FILE__)
 
-enabled_site_setting :slack_enabled
-
 PLUGIN_NAME = "discourse-slack-official".freeze
+
+enabled_site_setting :slack_enabled
 
 register_asset "stylesheets/slack_admin.scss"
 
 after_initialize do
 
-  unless ::PluginStore.get(PLUGIN_NAME, "not_first_time")
-    id = SecureRandom.hex(16)
-    ::PluginStore.set(PLUGIN_NAME, "filter_#{id}", { category_id: '*', channel: "#general", filter: "follow", tags: [] })
-    ::PluginStore.set(PLUGIN_NAME, "_category_*_#general", id)
-    ::PluginStore.set(PLUGIN_NAME, "not_first_time", true)
-  end
-
   module ::DiscourseSlack
+    def self.plugin_name
+      PLUGIN_NAME
+    end
+
     class Engine < ::Rails::Engine
       engine_name PLUGIN_NAME
       isolate_namespace DiscourseSlack
@@ -506,31 +503,6 @@ private
       responses
     end
 
-    def self.migrate_legacy_data
-      rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME).where("key ~* :pat", :pat => '^category_.*')
-
-      rows.each do |row|
-        ::PluginStore.cast_value(row.type_name, row.value).each do | rule |
-          unless rule[:migrated].present? && rule[:migrated]
-            id = row.key.gsub('category_', '')
-            id = '*' if id == 0 || id === '0'
-            channel = rule[:channel]
-            data = ::PluginStore.get(PLUGIN_NAME, "category_#{id}")
-            update = data.index { |i| i['channel'] === channel }
-            DiscourseSlack::Slack.set_filter(channel, rule[:filter], id)
-            data[update]['migrated'] = true
-            data = data.uniq { |i| i['channel'] }
-            ::PluginStore.set(PLUGIN_NAME, "category_#{id}", data.uniq)
-          end
-        end
-      end
-    end
-
-  end
-
-  unless ::PluginStore.get(PLUGIN_NAME, "legacy_migrated")
-    DiscourseSlack::Slack.migrate_legacy_data
-    ::PluginStore.set(PLUGIN_NAME, "legacy_migrated", true)
   end
 
   DiscourseEvent.on(:post_created) do |post|

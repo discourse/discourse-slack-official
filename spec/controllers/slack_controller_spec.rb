@@ -3,7 +3,7 @@ require 'rails_helper'
 describe ::DiscourseSlack::SlackController do
   routes { ::DiscourseSlack::Engine.routes }
 
-  PLUGIN_NAME = "discourse-slack-official".freeze
+  PLUGIN_NAME = ::DiscourseSlack.plugin_name.freeze
 
   before do
     SiteSetting.slack_outbound_webhook_url = "https://hooks.slack.com/services/abcde"
