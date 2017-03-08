@@ -18,6 +18,10 @@ export default Ember.Controller.extend({
 
   editing: FilterRule.create({}),
 
+  taggingEnabled: function() {
+    return this.siteSettings.tagging_enabled;
+  }.property(),
+
   actions: {
     edit(rule) {
       this.set( 'editing', FilterRule.create(rule.getProperties('id', 'channel', 'filter', 'category_id', 'tags')));

@@ -4,7 +4,9 @@
     <tr>
       <th>{{i18n "slack.channel"}}</th>
       <th>{{i18n "slack.category"}}</th>
+      {{#if taggingEnabled}}
       <th>{{i18n "slack.tags"}}</th>
+      {{/if}}
       <th>{{i18n "slack.filter"}}</th>
       <th></th>
     </tr>
@@ -13,7 +15,9 @@
       <tr class="">
         <td>{{rule.channel}}</td>
         <td>{{rule.category.name}}</td>
+        {{#if taggingEnabled}}
         <td>{{rule.tags}}</td>
+        {{/if}}
         <td>{{rule.filter_name}}</td>
         <td>
           <div class="pull-right">
@@ -29,7 +33,9 @@
     <tr class="new-filter">
       <td>{{text-field value=editing.channel placeholder='#channel, @user or Channel ID' class="channel" width="200px"}}</td>
       <td>{{combo-box value=editing.category_id content=categories width="200px"}}</td>
+      {{#if taggingEnabled}}
       <td>{{tag-chooser tags=editing.tags placeholderKey="slack.choose.tags" width="200px"}}</td>
+      {{/if}}
       <td>{{combo-box content=filters value=editing.filter none='slack.choose.filter' width="200px"}}</td>
       <td>
         <div class="pull-right">

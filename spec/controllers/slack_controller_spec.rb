@@ -14,9 +14,7 @@ describe ::DiscourseSlack::SlackController do
     let!(:user) { log_in(:admin) }
 
     it "checking existence of default filters" do
-      expect(PluginStoreRow.where(plugin_name: PLUGIN_NAME).count).to eq(4)
-      expect(PluginStore.get(PLUGIN_NAME, "not_first_time")).to eq(true)
-      expect(PluginStore.get(PLUGIN_NAME, "legacy_migrated")).to eq(true)
+      expect(PluginStoreRow.where(plugin_name: PLUGIN_NAME).count).to eq(3)
     end
 
     context '#index' do
@@ -25,6 +23,7 @@ describe ::DiscourseSlack::SlackController do
         expect(response).to be_success
         json = ::JSON.parse(response.body)
         expect(json['slack']).to be_present
+        expect(json['slack'].count).to eq(1)
       end
     end
 

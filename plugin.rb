@@ -16,6 +16,13 @@ register_asset "stylesheets/slack_admin.scss"
 
 after_initialize do
 
+  unless ::PluginStore.get(PLUGIN_NAME, "not_first_time")
+    id = SecureRandom.hex(16)
+    ::PluginStore.set(PLUGIN_NAME, "filter_#{id}", { category_id: '*', channel: "#general", filter: "follow", tags: [] })
+    ::PluginStore.set(PLUGIN_NAME, "_category_*_#general", id)
+    ::PluginStore.set(PLUGIN_NAME, "not_first_time", true)
+  end
+
   module ::DiscourseSlack
     def self.plugin_name
       PLUGIN_NAME
@@ -504,6 +511,8 @@ private
     end
 
   end
+
+  load File.expand_path("../jobs/onceoff/migrate_legacy_data.rb", __FILE__)
 
   DiscourseEvent.on(:post_created) do |post|
     Jobs.enqueue_in(SiteSetting.post_to_slack_window_secs.seconds, :notify_slack, post_id: post[:id]) if SiteSetting.slack_enabled?

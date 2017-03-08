@@ -1,6 +1,7 @@
 module Jobs
 
   class MigrateLegacyData < Jobs::Onceoff
+
     PLUGIN_NAME = ::DiscourseSlack.plugin_name.freeze
 
     def execute_onceoff(args)
@@ -12,11 +13,8 @@ module Jobs
           ::DiscourseSlack::Slack.set_filter(rule[:channel], rule[:filter], id)
         end
       end
-
-      id = SecureRandom.hex(16)
-      ::PluginStore.set(PLUGIN_NAME, "filter_#{id}", { category_id: '*', channel: "#general", filter: "follow", tags: [] })
-      ::PluginStore.set(PLUGIN_NAME, "_category_*_#general", id)
     end
 
   end
+
 end
