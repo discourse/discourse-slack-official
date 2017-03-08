@@ -6,17 +6,18 @@ export default RestModel.extend({
   filter: null,
 
   category: function() {
-    var id = parseInt(this.get('category_id'));
+    var id = this.get('category_id');
 
     switch (id) {
-      case 0:
-        return Discourse.Category.create({ name: 'All Categories', id: 0 });
-        break;
-      case -1:
-        return Discourse.Category.create({ name: null, id: -1 });
+      case '*':
+        return Discourse.Category.create({ name: I18n.t('slack.choose.all_categories'), id: '*' });
         break;
       default:
-        return Discourse.Category.findById(id) || { id: id, name: 'Deleted Category' };
+        if (id) {
+          return Discourse.Category.create({ name: null, id: null });
+        } else {
+          return Discourse.Category.findById(id) || { id: id, name: 'Deleted Category' };
+        }
     }
   }.property('category_id'),
 

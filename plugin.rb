@@ -58,12 +58,7 @@ after_initialize do
 
       rows.each do |row|
         rule = ::PluginStore.cast_value(row.type_name, row.value)
-        if rule[:category_id].present?
-          category_id = rule[:category_id]
-          category_id = 0 if category_id === "*"
-        else
-          category_id = -1
-        end
+        category_id = rule[:category_id]
         x = {
           id: row.key.gsub('filter_', ''),
           channel: rule[:channel],
@@ -98,10 +93,8 @@ after_initialize do
 
     # "0" on the client is usde to represent "all categories" - "*" on the server, to support old versions of the plugin.
     def edit
-      return render json: { message: "Error"}, status: 500 if params[:channel] == '' || !is_number?(params[:category_id])
+      return render json: { message: "Error"}, status: 500 if params[:channel] == '' || (params[:category_id].nil? && (params[:tags].nil? || params[:tags].empty?))
       category_id = params[:category_id]
-      category_id = "*" if category_id === "0"
-      category_id = nil if category_id === "-1"
       if params[:id].present?
         DiscourseSlack::Slack.update_filter(params[:id], params[:channel], params[:filter], category_id, params[:tags])
       else
@@ -119,7 +112,7 @@ after_initialize do
     end
 
     def command
-      guardian = Guardian.new(User.find_by_username(SiteSetting.slack_discourse_username))
+      guardian = ::DiscourseSlack::Slack.guardian
 
       tokens = params[:text].split(" ")
 
@@ -152,10 +145,10 @@ after_initialize do
             render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize}* tag *#{tag.name}*" }
           else
             category = Category.find_by({slug: value})
-            category_id = "-1"
+            category_id = nil
             category_id = "*" if (value.casecmp("all") === 0)
             category_id = category.id if (category && guardian.can_see_category?(category))
-            unless category_id === "-1"
+            unless category_id.nil?
               execute(channel, cmd, category_id, 'category')
               if category_id === "*"
                 render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize} all categories* on this channel." }
@@ -297,11 +290,11 @@ private
       rows.each do |row|
         category_id = row['category_id']
         if category_id.present?
-          if category_id == 0
+          if category_id === "*"
             text << "#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} *all categories*\n"
           else
-            category = Category.find_by({id: category_id})
-            text << "#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} category *#{category.name}*\n"
+            category = Category.find_by(id: category_id)
+            text << "#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} category *#{category.name}*\n" unless category.nil?
           end
         end
         tags = row['tags']
@@ -310,9 +303,13 @@ private
           text << "\n#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} tags *#{tags_text}*\n"
         end
       end
-      cat_list = (CategoryList.new(Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)).categories.map { |category| category.slug }).join(', ')
+      cat_list = (CategoryList.new(guardian).categories.map { |category| category.slug }).join(', ')
       text << "\nHere are your available categories: #{cat_list}"
       text
+    end
+
+    def self.guardian
+      Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)
     end
 
     def self.help
@@ -442,7 +439,7 @@ private
       uniq_func = proc { |i| i[:channel] }
       sort_func = proc { |a, b| precedence[a] <=> precedence[b] }
 
-      rows = get_category_store(post.topic.category_id) | get_category_store("*") | get_category_store(0)
+      rows = get_category_store(post.topic.category_id) | get_category_store("*")
       post.topic.tags.each do |tag|
         rows = rows + get_tag_store(tag.name)
       end
@@ -505,6 +502,7 @@ private
         ::PluginStore.cast_value(row.type_name, row.value).each do | rule |
           unless rule[:migrated].present? && rule[:migrated]
             id = row.key.gsub('category_', '')
+            id = '*' if id == 0 || id === '0'
             channel = rule[:channel]
             data = ::PluginStore.get(PLUGIN_NAME, "category_#{id}")
             update = data.index { |i| i['channel'] === channel }
