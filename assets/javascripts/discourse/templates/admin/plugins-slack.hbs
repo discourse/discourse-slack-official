@@ -31,7 +31,7 @@
 
   <table>
     <tr class="new-filter">
-      <td>{{text-field value=editing.channel placeholder='#channel, @user or Channel ID' class="channel" width="200px"}}</td>
+      <td>{{text-field value=editing.channel placeholderKey="slack.choose.channel" class="channel" width="200px"}}</td>
       <td>{{combo-box value=editing.category_id content=categories width="200px"}}</td>
       {{#if taggingEnabled}}
       <td>{{tag-chooser tags=editing.tags placeholderKey="slack.choose.tags" width="200px"}}</td>
@@ -45,8 +45,7 @@
     </tr>
   </table>
 
-  {{!-- TODO translate --}}
-  <p>To modify these settings from slack, set up a slash command using <a href="https://github.com/discourse/discourse-slack-official/blob/master/README.md">these instructions</a></p>
+  {{i18n "slack.command.help"}}
 
   {{d-button action="testNotification"
       icon="rocket"

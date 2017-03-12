@@ -63,6 +63,7 @@ after_initialize do
       rows.each do |row|
         rule = ::PluginStore.cast_value(row.type_name, row.value)
         category_id = rule[:category_id]
+
         x = {
           id: row.key.gsub('filter_', ''),
           channel: rule[:channel],
@@ -95,15 +96,17 @@ after_initialize do
       true if Float(string) rescue false
     end
 
-    # "0" on the client is usde to represent "all categories" - "*" on the server, to support old versions of the plugin.
     def edit
       return render json: { message: "Error"}, status: 500 if params[:channel] == '' || (params[:category_id].blank? && params[:tags].blank?)
+
       category_id = params[:category_id]
+
       if params[:id].present?
         DiscourseSlack::Slack.update_filter(params[:id], params[:channel], params[:filter], category_id, params[:tags])
       else
         DiscourseSlack::Slack.set_filter(params[:channel], params[:filter], category_id, params[:tags])
       end
+
       render json: success_json
     end
 
@@ -137,36 +140,44 @@ after_initialize do
       ## TODO Put back URL finding
       case cmd
       when "watch", "follow", "mute"
+
         if (tokens.size == 2)
           value = tokens[1]
-          filter_exist = false
+          filter_to_past = DiscourseSlack::Slack.filter_to_past(cmd).capitalize
+
           if value.start_with?('tag:')
             value.sub! 'tag:', ''
             tag = Tag.find_by({name: value})
-            return render json: { text: "I can't find the *#{value}* tag." } unless tag
+            return render json: { text: I18n.t("slack.message.not_found.tag", name: value) } unless tag
 
             execute(channel, cmd, value, 'tag')
-            render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize}* tag *#{tag.name}*" }
+            render json: { text: I18n.t("slack.message.success.tag", command: filter_to_past, name: tag.name) }
           else
             category = Category.find_by({slug: value})
             category_id = ''
             category_id = "*" if (value.casecmp("all") === 0)
             category_id = category.id if (category && guardian.can_see_category?(category))
+
             unless category_id.blank?
               execute(channel, cmd, category_id, 'category')
+
               if category_id === "*"
-                render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize} all categories* on this channel." }
+                render json: { text: I18n.t("slack.message.success.all_categories", command: filter_to_past) }
               else
-                render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize}* category *#{category.name}*" }
+                render json: { text: I18n.t("slack.message.success.category", command: filter_to_past, name: category.name) }
               end
+
             else
               cat_list = (CategoryList.new(guardian).categories.map { |c| c.slug }).join(', ')
-              render json: { text: "I can't find the *#{tokens[1]}* category. Did you mean: #{cat_list}" }
+              render json: { text: I18n.t("slack.message.not_found.category", name: tokens[1], list: cat_list) }
             end
+
           end
+
         else
           render json: { text: DiscourseSlack::Slack.help }
         end
+
       when "help"
         render json: { text: DiscourseSlack::Slack.help }
       when "status"
@@ -174,6 +185,7 @@ after_initialize do
       else
         render json: { text: DiscourseSlack::Slack.help }
       end
+
     end
 
     def knock
@@ -267,12 +279,13 @@ private
   end
 
   class ::DiscourseSlack::Slack
+
     def self.filter_to_present(filter)
-      { 'mute' => 'muting', 'follow' => 'following', 'watch' => 'watching' }[filter]
+      I18n.t "slack.command.present.#{filter}"
     end
 
     def self.filter_to_past(filter)
-      { 'mute' => 'muted', 'follow' => 'followed', 'watch' => 'watched' }[filter]
+      I18n.t "slack.command.past.#{filter}"
     end
 
     def self.excerpt(html, max_length)
@@ -291,24 +304,31 @@ private
       text = ""
 
       rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME).where("key ~* :pat", :pat => '^filter_.*')
+
       rows.each do |row|
         category_id = row['category_id']
+        tags = row['tags']
+        channel = format_channel(row[:channel])
+        command = filter_to_present(row[:filter])
+
         if category_id.present?
           if category_id === "*"
-            text << "#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} *all categories*\n"
+            text << I18n.t("slack.message.status.all_categories", channel: channel, command: command)
           else
             category = Category.find_by(id: category_id)
-            text << "#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} category *#{category.name}*\n" unless category.blank?
+            text << I18n.t("slack.message.status.category", channel: channel, command: command, name: category.name) unless category.blank?
           end
         end
-        tags = row['tags']
+
         unless tags.blank?
           tags_text = tags.join(',')
-          text << "\n#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} tags *#{tags_text}*\n"
+          text << I18n.t("slack.message.status.tags", channel: channel, command: command, list: tags_text)
         end
+
       end
+
       cat_list = (CategoryList.new(guardian).categories.map { |category| category.slug }).join(', ')
-      text << "\nHere are your available categories: #{cat_list}"
+      text << I18n.t("slack.message.available_categories", list: cat_list)
       text
     end
 
@@ -317,13 +337,7 @@ private
     end
 
     def self.help
-      %(
-      `/discourse [watch|follow|mute|help|status] [category|tag:name|all]`
-*watch* – notify this channel for new topics and new replies
-*follow* – notify this channel for new topics
-*mute* – stop notifying this channel
-*status* – show current notification state and categories
-)
+      I18n.t("slack.help")
     end
 
     def self.slack_message(post, channel)
@@ -371,10 +385,12 @@ private
 
     def self.absolute(raw)
       url = URI(raw) rescue nil # No icon URL if not valid
+
       if url && url.scheme != 'mailto'
         url.host = Discourse.current_hostname if !(url.host)
         url.scheme = (SiteSetting.force_https ? "https" : "http") if !(url.scheme)
       end
+
       url
     end
 
@@ -407,6 +423,7 @@ private
       ::PluginStore.set(PLUGIN_NAME, "filter_#{id}", data)
 
       channel_changed = (old_channel != channel)
+
       if channel_changed
         removed_tags = old_tags
         added_tags = tags
