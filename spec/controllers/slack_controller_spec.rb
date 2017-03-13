@@ -5,6 +5,10 @@ describe ::DiscourseSlack::SlackController do
 
   PLUGIN_NAME = ::DiscourseSlack.plugin_name.freeze
 
+  def get_value(key)
+    PluginStore.get(PLUGIN_NAME, key)
+  end
+
   before do
     SiteSetting.slack_outbound_webhook_url = "https://hooks.slack.com/services/abcde"
     SiteSetting.slack_enabled = true
@@ -15,6 +19,7 @@ describe ::DiscourseSlack::SlackController do
 
     it "checking existence of default filters" do
       expect(PluginStoreRow.where(plugin_name: PLUGIN_NAME).count).to eq(3)
+      expect(get_value("not_first_time")).to eq(true)
     end
 
     context '#index' do
@@ -22,7 +27,14 @@ describe ::DiscourseSlack::SlackController do
         xhr :get, :list
         expect(response).to be_success
         json = ::JSON.parse(response.body)
-        expect(json['slack'].count).to eq(1)
+        filters = json['slack']
+        expect(filters.count).to eq(1)
+        expect(filters[0]).to include(
+          "channel" => "#general",
+          "category_id" => "*",
+          "tags" => [],
+          "filter" => "follow"
+        )
       end
     end
 
@@ -32,18 +44,30 @@ describe ::DiscourseSlack::SlackController do
           channel, category_id, filter = "#hello", "1", "follow"
           xhr :post, :edit, { channel: channel, category_id: category_id, filter: filter }
           expect(response).to be_success
-          id = PluginStore.get(PLUGIN_NAME, "_category_#{category_id}_#{channel}")
-          data = PluginStore.get(PLUGIN_NAME, "filter_#{id}")
-          expect(data[:channel]).to eq(channel)
-          expect(data[:category_id]).to eq(category_id)
-          expect(data[:filter]).to eq(filter)
+          id = get_value("_category_#{category_id}_#{channel}")
+          data = get_value("filter_#{id}")
+          expect(data).to include(
+            "channel" => channel,
+            "category_id" => category_id,
+            "filter" => filter
+          )
         }.to change(PluginStoreRow, :count).by(2)
       end
 
       it "creates a filter with tags" do
         expect {
-          xhr :post, :edit, { channel: '#welcome', category_id: 2, filter: 'follow', tags: ["test", "example"] }
+          channel, category_id, filter = "#welcome", "2", "follow"
+          xhr :post, :edit, { channel: channel, category_id: category_id, filter: filter, tags: ["test", "example"] }
           expect(response).to be_success
+          id = get_value("_category_#{category_id}_#{channel}")
+          data = get_value("filter_#{id}")
+          expect(data).to include(
+            "channel" => channel,
+            "category_id" => category_id,
+            "filter" => filter
+          )
+          expect(get_value("_tag_test_#{channel}")).to eq(id)
+          expect(get_value("_tag_example_#{channel}")).to eq(id)
         }.to change(PluginStoreRow, :count).by(4)
       end
     end
@@ -56,6 +80,8 @@ describe ::DiscourseSlack::SlackController do
         expect {
           xhr :delete, :delete, id: id
           expect(response).to be_success
+          expect(get_value("filter_#{id}")).to eq(nil)
+          expect(get_value("category_1_#hello")).to eq(nil)
         }.to change(PluginStoreRow, :count).by(-2)
       end
 
@@ -65,6 +91,8 @@ describe ::DiscourseSlack::SlackController do
         expect {
           xhr :delete, :delete, id: id
           expect(response).to be_success
+          expect(get_value("tag_test_#hello")).to eq(nil)
+          expect(get_value("tag_example_#hello")).to eq(nil)
         }.to change(PluginStoreRow, :count).by(-4)
       end
 
@@ -80,15 +108,16 @@ describe ::DiscourseSlack::SlackController do
         xhr :post, :edit, { id: id, channel: new_channel, category_id: new_category_id, filter: 'watch', tags: new_tags }
         expect(response).to be_success
         filter = ::DiscourseSlack::Slack.get_filter(id)
-        expect(filter[:channel]).to eq(new_channel)
-        expect(filter[:category_id]).to eq(new_category_id)
-        expect(filter[:filter]).to eq('watch')
-        expect(filter[:tags]).to eq(new_tags)
-        value = ::PluginStore.get(PLUGIN_NAME, "_category_#{new_category_id}_#{new_channel}")
-        expect(value).to eq(id)
+        expect(filter).to include(
+          "channel" => new_channel,
+          "category_id" => new_category_id,
+          "filter" => "watch",
+          "tags" => new_tags
+        )
+        expect(get_value("_category_#{new_category_id}_#{new_channel}")).to eq(id)
+
         new_tags.each do |t|
-          value = ::PluginStore.get(PLUGIN_NAME, "_tag_#{t}_#{new_channel}")
-          expect(value).to eq(id)
+          expect(get_value("_tag_#{t}_#{new_channel}")).to eq(id)
         end
       end
 
@@ -100,16 +129,18 @@ describe ::DiscourseSlack::SlackController do
         xhr :post, :edit, { id: id, channel: new_channel, category_id: new_category_id, filter: 'watch', tags: [] }
         expect(response).to be_success
         filter = ::DiscourseSlack::Slack.get_filter(id)
-        expect(filter[:channel]).to eq(new_channel)
-        expect(filter[:category_id]).to eq(new_category_id)
-        expect(filter[:filter]).to eq('watch')
-        expect(filter[:tags]).to eq([])
-        value = ::PluginStore.get(PLUGIN_NAME, "_category_#{new_category_id}_#{new_channel}")
-        expect(value).to eq(id)
+        expect(filter).to include(
+          "channel" => new_channel,
+          "category_id" => new_category_id,
+          "filter" => "watch",
+          "tags" => []
+        )
+        expect(get_value("_category_#{new_category_id}_#{new_channel}")).to eq(id)
+
         tags.each do |t|
-          value = ::PluginStore.get(PLUGIN_NAME, "_tag_#{t}_#{new_channel}")
-          expect(value).to eq(nil)
+          expect(get_value("_tag_#{t}_#{new_channel}")).to eq(nil)
         end
+
       end
 
     end
@@ -125,7 +156,8 @@ describe ::DiscourseSlack::SlackController do
 
         expect {
           xhr :post, :command, { text: "follow #{category.slug}", channel_name: "welcome", token: "SECRET TOKEN" }
-          expect(response).to be_success
+          json = ::JSON.parse(response.body)
+          expect(json["text"]).to eq(I18n.t("slack.message.success.category", command: "Followed", name: category.name))
         }.to change(PluginStoreRow, :count).by(2)
       end
 
@@ -134,14 +166,16 @@ describe ::DiscourseSlack::SlackController do
 
         expect {
           xhr :post, :command, { text: "watch tag:#{tag.name}", channel_name: "welcome", token: "SECRET TOKEN" }
-          expect(response).to be_success
+          json = ::JSON.parse(response.body)
+          expect(json["text"]).to eq(I18n.t("slack.message.success.tag", command: "Watched", name: tag.name))
         }.to change(PluginStoreRow, :count).by(2)
       end
 
       it 'should remove filter to mute a category on slack' do
         expect {
           xhr :post, :command, { text: "mute all", channel_name: "general", token: "SECRET TOKEN" }
-          expect(response).to be_success
+          json = ::JSON.parse(response.body)
+          expect(json["text"]).to eq(I18n.t("slack.message.success.all_categories", command: "Muted"))
         }.to change(PluginStoreRow, :count).by(0)
       end
 
@@ -151,7 +185,8 @@ describe ::DiscourseSlack::SlackController do
 
         expect {
           xhr :post, :command, { text: "mute tag:#{tag.name}", channel_name: "welcome", token: "SECRET TOKEN" }
-          expect(response).to be_success
+          json = ::JSON.parse(response.body)
+          expect(json["text"]).to eq(I18n.t("slack.message.success.tag", command: "Muted", name: tag.name))
         }.to change(PluginStoreRow, :count).by(0)
       end
 

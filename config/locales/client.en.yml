@@ -26,14 +26,6 @@ en:
         filter: 'Please choose a filter.'
       command:
         help: "To modify these settings from slack, set up a slash command using <a href='https://github.com/discourse/discourse-slack-official/blob/master/README.md'>these instructions</a>"
-        past:
-          mute: 'muted'
-          follow: 'followed'
-          watch: 'watched'
-        present:
-          mute: 'muting'
-          follow: 'following'
-          watch: 'watching'
       present:
         mute: 'Muting'
         follow: 'First post only'
