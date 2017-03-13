@@ -333,7 +333,7 @@ private
     end
 
     def self.guardian
-      Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)
+      Guardian.new User.find_by(username: SiteSetting.slack_discourse_username)
     end
 
     def self.help
