@@ -1,7 +1,6 @@
 require 'rails_helper'
 
 describe Jobs::NotifySlack do
-  PLUGIN_NAME = ::DiscourseSlack.plugin_name.freeze
 
   before do
     SiteSetting.slack_outbound_webhook_url = "https://hooks.slack.com/services/abcde"
@@ -21,7 +20,7 @@ describe Jobs::NotifySlack do
     end
 
     it "only if topic's category have a filter" do
-      ::PluginStoreRow.find_by(plugin_name: PLUGIN_NAME, key: "_category_*_#general").destroy
+      ::PluginStoreRow.find_by(plugin_name: DiscourseSlack::PLUGIN_NAME, key: "_category_*_#general").destroy
       category = Fabricate(:category)
       topic = Fabricate(:topic, category_id: category.id, posts: [post])
       response = Jobs::NotifySlack.new.execute({post_id: post[:id]})
@@ -32,7 +31,7 @@ describe Jobs::NotifySlack do
     end
 
     it "only if topic's tag have a filter" do
-      ::PluginStoreRow.find_by(plugin_name: PLUGIN_NAME, key: "_category_*_#general").destroy
+      ::PluginStoreRow.find_by(plugin_name: DiscourseSlack::PLUGIN_NAME, key: "_category_*_#general").destroy
       SiteSetting.tagging_enabled = true
       tag = Fabricate(:tag)
       topic = Fabricate(:topic, tags: [tag], posts: [post])

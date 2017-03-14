@@ -3,10 +3,8 @@ require 'rails_helper'
 describe ::DiscourseSlack::SlackController do
   routes { ::DiscourseSlack::Engine.routes }
 
-  PLUGIN_NAME = ::DiscourseSlack.plugin_name.freeze
-
   def get_value(key)
-    PluginStore.get(PLUGIN_NAME, key)
+    PluginStore.get(DiscourseSlack::PLUGIN_NAME, key)
   end
 
   before do
@@ -18,7 +16,7 @@ describe ::DiscourseSlack::SlackController do
     let!(:user) { log_in(:admin) }
 
     it "checking existence of default filters" do
-      expect(PluginStoreRow.where(plugin_name: PLUGIN_NAME).count).to eq(3)
+      expect(PluginStoreRow.where(plugin_name: DiscourseSlack::PLUGIN_NAME).count).to eq(3)
       expect(get_value("not_first_time")).to eq(true)
     end
 
