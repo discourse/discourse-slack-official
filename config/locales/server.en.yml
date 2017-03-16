@@ -11,3 +11,32 @@ en:
     errors:
       invalid_webhook_url: "'slack outbound webhook url' is not a valid URL."
       slack_outbound_webhook_url_is_empty: "You must set 'slack outbound webhook url' before enabling this setting."
+  slack:
+    message:
+      not_found:
+        tag: "I can't find the *%{name}* tag."
+        category: "I can't find the *%{name}* category. Did you mean: %{list}"
+      success:
+        all_categories: "*%{command} all categories* on this channel."
+        category: "*%{command}* category *%{name}*"
+        tag: "*%{command}* tag *#{name}*"
+      status:
+        all_categories: "%{channel} is %{command} *all categories*\n"
+        category: "%{channel} is %{command} category *%{name}*\n"
+        tags: "%{channel} is %{command} tags *%{list}*\n"
+      available_categories: "\nHere are your available categories: %{list}"
+    help: |
+      `/discourse [watch|follow|mute|help|status] [category|tag:name|all]`
+      *watch* – notify this channel for new topics and new replies
+      *follow* – notify this channel for new topics
+      *mute* – stop notifying this channel
+      *status* – show current notification state and categories
+    command:
+      past:
+        mute: 'muted'
+        follow: 'followed'
+        watch: 'watched'
+      present:
+        mute: 'muting'
+        follow: 'following'
+        watch: 'watching'

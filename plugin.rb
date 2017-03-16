@@ -10,22 +10,24 @@ require File.expand_path('../lib/validators/discourse_slack_enabled_setting_vali
 
 enabled_site_setting :slack_enabled
 
-PLUGIN_NAME = "discourse-slack-official".freeze
-
 register_asset "stylesheets/slack_admin.scss"
 
 after_initialize do
 
-  unless ::PluginStore.get(PLUGIN_NAME, "not_first_time")
-    ::PluginStore.set(PLUGIN_NAME, "not_first_time", true)
-    ::PluginStore.set(PLUGIN_NAME, "category_*", [{ category_id: '0', channel: "#general", filter: "follow" }])
-  end
-
   module ::DiscourseSlack
+    PLUGIN_NAME = "discourse-slack-official".freeze
+
     class Engine < ::Rails::Engine
       engine_name PLUGIN_NAME
       isolate_namespace DiscourseSlack
     end
+  end
+
+  unless ::PluginStore.get(DiscourseSlack::PLUGIN_NAME, "not_first_time")
+    id = SecureRandom.hex(16)
+    ::PluginStore.set(DiscourseSlack::PLUGIN_NAME, "filter_#{id}", { category_id: '*', channel: "#general", filter: "follow", tags: [] })
+    ::PluginStore.set(DiscourseSlack::PLUGIN_NAME, "_category_*_#general", id)
+    ::PluginStore.set(DiscourseSlack::PLUGIN_NAME, "not_first_time", true)
   end
 
   require_dependency File.expand_path('../jobs/notify_slack.rb', __FILE__)
@@ -36,7 +38,7 @@ after_initialize do
   require_relative 'slack_parser'
 
   class ::DiscourseSlack::SlackController < ::ApplicationController
-    requires_plugin PLUGIN_NAME
+    requires_plugin DiscourseSlack::PLUGIN_NAME
 
     before_filter :slack_enabled?
     before_filter :slack_discourse_username_present?
@@ -51,19 +53,22 @@ after_initialize do
     end
 
     def list
-      rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME).where("key ~* :pat", :pat => '^category_.*')
+      rows = PluginStoreRow.where(plugin_name: DiscourseSlack::PLUGIN_NAME).where("key ~* :pat", :pat => '^filter_.*')
       out = []
 
       rows.each do |row|
-        ::PluginStore.cast_value(row.type_name, row.value).each do | rule |
-          x = {
-            category_id: row.key.gsub('category_', '').gsub('*', '0'),
-            channel: rule[:channel],
-            filter: rule[:filter]
-          }
+        rule = ::PluginStore.cast_value(row.type_name, row.value)
+        category_id = rule[:category_id]
 
-          out.push x
-        end
+        x = {
+          id: row.key.gsub('filter_', ''),
+          channel: rule[:channel],
+          category_id: category_id,
+          tags: rule[:tags],
+          filter: rule[:filter]
+        }
+
+        out.push x
       end
 
       render json: (params[:raw]) ? rows : out
@@ -79,7 +84,7 @@ after_initialize do
     end
 
     def reset_settings
-      PluginStoreRow.where(plugin_name: PLUGIN_NAME).destroy_all
+      PluginStoreRow.where(plugin_name: DiscourseSlack::PLUGIN_NAME).destroy_all
       render json: success_json
     end
 
@@ -87,24 +92,30 @@ after_initialize do
       true if Float(string) rescue false
     end
 
-    # "0" on the client is usde to represent "all categories" - "*" on the server, to support old versions of the plugin.
     def edit
-      return render json: { message: "Error"}, status: 500 if params[:channel] == '' || !is_number?(params[:category_id])
-      DiscourseSlack::Slack.set_filter_by_id(( params[:category_id] === "0") ? '*' : params[:category_id], params[:channel], params[:filter])
+      return render json: { message: "Error"}, status: 500 if params[:channel] == '' || (params[:category_id].blank? && params[:tags].blank?)
+
+      category_id = params[:category_id]
+
+      if params[:id].present?
+        DiscourseSlack::Slack.update_filter(params[:id], params[:channel], params[:filter], category_id, params[:tags])
+      else
+        DiscourseSlack::Slack.set_filter(params[:channel], params[:filter], category_id, params[:tags])
+      end
+
       render json: success_json
     end
 
     def delete
-      return render json: { message: "Error"}, status: 500 if params[:channel] == '' || !is_number?(params[:category_id])
+      return render json: { message: "Error"}, status: 500 if params[:id].nil?
 
-      DiscourseSlack::Slack.delete_filter('*', params[:channel]) if ( params[:category_id] === "0" )
-      DiscourseSlack::Slack.delete_filter(params[:category_id], params[:channel])
+      DiscourseSlack::Slack.delete_filter(params[:id])
 
       render json: success_json
     end
 
     def command
-      guardian = Guardian.new(User.find_by_username(SiteSetting.slack_discourse_username))
+      guardian = ::DiscourseSlack::Slack.guardian
 
       tokens = params[:text].split(" ")
 
@@ -125,23 +136,44 @@ after_initialize do
       ## TODO Put back URL finding
       case cmd
       when "watch", "follow", "mute"
+
         if (tokens.size == 2)
-          cat_name = tokens[1]
-          category = Category.find_by({slug: cat_name})
-          if (cat_name.casecmp("all") === 0)
-            DiscourseSlack::Slack.set_filter_by_id('*', channel, cmd, params[:channel_id])
-            render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize} all categories* on this channel." }
-          elsif (category && guardian.can_see_category?(category))
-            DiscourseSlack::Slack.set_filter_by_id(category.id, channel, cmd, params[:channel_id])
-            render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize}* category *#{category.name}*" }
+          value = tokens[1]
+          filter_to_past = DiscourseSlack::Slack.filter_to_past(cmd).capitalize
+
+          if value.start_with?('tag:')
+            value.sub! 'tag:', ''
+            tag = Tag.find_by({name: value})
+            return render json: { text: I18n.t("slack.message.not_found.tag", name: value) } unless tag
+
+            execute(channel, cmd, value, 'tag')
+            render json: { text: I18n.t("slack.message.success.tag", command: filter_to_past, name: tag.name) }
           else
-            # TODO DRY (easy)
-            cat_list = (CategoryList.new(Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)).categories.map { |c| c.slug }).join(', ')
-            render json: { text: "I can't find the *#{tokens[1]}* category. Did you mean: #{cat_list}" }
+            category = Category.find_by({slug: value})
+            category_id = ''
+            category_id = "*" if (value.casecmp("all") === 0)
+            category_id = category.id if (category && guardian.can_see_category?(category))
+
+            unless category_id.blank?
+              execute(channel, cmd, category_id, 'category')
+
+              if category_id === "*"
+                render json: { text: I18n.t("slack.message.success.all_categories", command: filter_to_past) }
+              else
+                render json: { text: I18n.t("slack.message.success.category", command: filter_to_past, name: category.name) }
+              end
+
+            else
+              cat_list = (CategoryList.new(guardian).categories.map { |c| c.slug }).join(', ')
+              render json: { text: I18n.t("slack.message.not_found.category", name: tokens[1], list: cat_list) }
+            end
+
           end
+
         else
           render json: { text: DiscourseSlack::Slack.help }
         end
+
       when "help"
         render json: { text: DiscourseSlack::Slack.help }
       when "status"
@@ -149,6 +181,7 @@ after_initialize do
       else
         render json: { text: DiscourseSlack::Slack.help }
       end
+
     end
 
     def knock
@@ -201,15 +234,54 @@ after_initialize do
 
     def redirect_to_login_if_required
     end
+
+private
+
+        def execute(channel, command, value, type)
+          category_id = type === "category" ? value : ''
+          tags = type === "tag" ? [value] : []
+          filter_exist = false
+          row = ::PluginStoreRow.find_by(plugin_name: DiscourseSlack::PLUGIN_NAME, key: "_#{type}_#{value}_#{channel}")
+          if row
+            data = DiscourseSlack::Slack.get_filter(row.value)
+            if data
+              unless data['filter'] === command
+                overwritable = false
+                if type === "tag"
+                  if data['tags'].count > 1 || data['category_id'].present?
+                    data['tags'] = data['tags'].delete(tag.name)
+                  else
+                    overwritable = true
+                  end
+                elsif type === "category"
+                  unless data['tags'].empty?
+                    data['category_id'] = ''
+                  else
+                    overwritable = true
+                  end
+                end
+                if overwritable
+                  data['filter'] = command
+                  filter_exist = true
+                end
+                ::PluginStore.set(DiscourseSlack::PLUGIN_NAME, "filter_#{row.value}", data)
+              else
+                filter_exist = true
+              end
+            end
+          end
+          DiscourseSlack::Slack.set_filter(channel, command, category_id, tags) unless filter_exist
+        end
   end
 
   class ::DiscourseSlack::Slack
+
     def self.filter_to_present(filter)
-      { 'mute' => 'muting', 'follow' => 'following', 'watch' => 'watching' }[filter]
+      I18n.t "slack.command.present.#{filter}"
     end
 
     def self.filter_to_past(filter)
-      { 'mute' => 'muted', 'follow' => 'followed', 'watch' => 'watched' }[filter]
+      I18n.t "slack.command.past.#{filter}"
     end
 
     def self.excerpt(html, max_length)
@@ -225,35 +297,43 @@ after_initialize do
     end
 
     def self.status
-      rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME)
       text = ""
 
+      rows = PluginStoreRow.where(plugin_name: DiscourseSlack::PLUGIN_NAME).where("key ~* :pat", :pat => '^filter_.*')
 
-      categories = rows.map { |item| item.key.gsub('category_', '').to_i }
+      rows.each do |row|
+        category_id = row['category_id']
+        tags = row['tags']
+        channel = format_channel(row[:channel])
+        command = filter_to_present(row[:filter])
 
-      Category.where(id: categories).each do | category |
-        #why
-        get_store(category.id).each do |row|
-          text << "#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} category *#{category.name}*\n"
+        if category_id.present?
+          if category_id === "*"
+            text << I18n.t("slack.message.status.all_categories", channel: channel, command: command)
+          else
+            category = Category.find_by(id: category_id)
+            text << I18n.t("slack.message.status.category", channel: channel, command: command, name: category.name) unless category.blank?
+          end
         end
+
+        unless tags.blank?
+          tags_text = tags.join(',')
+          text << I18n.t("slack.message.status.tags", channel: channel, command: command, list: tags_text)
+        end
+
       end
 
-      get_store('*').each do |row|
-        text << "#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} *all categories*\n"
-      end
-      cat_list = (CategoryList.new(Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)).categories.map { |category| category.slug }).join(', ')
-      text << "\nHere are your available categories: #{cat_list}"
+      cat_list = (CategoryList.new(guardian).categories.map { |category| category.slug }).join(', ')
+      text << I18n.t("slack.message.available_categories", list: cat_list)
       text
     end
 
+    def self.guardian
+      Guardian.new User.find_by(username: SiteSetting.slack_discourse_username)
+    end
+
     def self.help
-      %(
-      `/discourse [watch|follow|mute|help|status] [category|all]`
-*watch* – notify this channel for new topics and new replies
-*follow* – notify this channel for new topics
-*mute* – stop notifying this channel
-*status* – show current notification state and categories
-)
+      I18n.t("slack.help")
     end
 
     def self.slack_message(post, channel)
@@ -287,7 +367,7 @@ after_initialize do
         mrkdwn_in: ["text"]
       }
 
-      record = ::PluginStore.get(PLUGIN_NAME, "topic_#{post.topic.id}_#{channel}")
+      record = ::PluginStore.get(DiscourseSlack::PLUGIN_NAME, "topic_#{post.topic.id}_#{channel}")
 
       if (SiteSetting.slack_access_token.empty? || post.is_first_post? || record.blank? || (record.present? &&  ((Time.now.to_i - record[:ts].split('.')[0].to_i)/ 60) >= 5 ))
         summary[:title] = "#{topic.title} #{(category === '[uncategorized]')? '' : category} #{(topic.tags.present?)? topic.tags.map {|tag| tag.name}.join(', ') : ''}"
@@ -301,40 +381,76 @@ after_initialize do
 
     def self.absolute(raw)
       url = URI(raw) rescue nil # No icon URL if not valid
+
       if url && url.scheme != 'mailto'
         url.host = Discourse.current_hostname if !(url.host)
         url.scheme = (SiteSetting.force_https ? "https" : "http") if !(url.scheme)
       end
+
       url
     end
 
-    def self.set_filter_by_id(id, channel, filter, channel_id = nil)
-      data = get_store(id)
+    def self.set_filter(channel, filter, category_id = '', tags = [])
+      tags = [] if tags.nil?
+      id = SecureRandom.hex(16)
 
-      update = data.index {|i| i['channel'] === channel || i['channel'] === channel_id }
+      data = { channel: channel, filter: filter, category_id: category_id, tags: tags }
 
-      if update
-        data[update]['filter'] = filter
-        data[update]['channel'] = channel # fix old IDs
+      ::PluginStore.set(DiscourseSlack::PLUGIN_NAME, "filter_#{id}", data)
+
+      ::PluginStore.set(DiscourseSlack::PLUGIN_NAME, "_category_#{category_id}_#{channel}", id) if category_id.present?
+      tags.each{ |t| ::PluginStore.set(DiscourseSlack::PLUGIN_NAME, "_tag_#{t}_#{channel}", id) }
+      id
+    end
+
+    def self.update_filter(id, channel, filter, category_id = '', tags = [])
+      tags = [] if tags.nil?
+      data = get_filter(id)
+
+      old_channel = data['channel']
+      old_category_id = data['category_id']
+      old_tags = data['tags']
+
+      data['filter'] = filter
+      data['channel'] = channel
+      data['category_id'] = category_id
+      data['tags'] = tags
+
+      ::PluginStore.set(DiscourseSlack::PLUGIN_NAME, "filter_#{id}", data)
+
+      channel_changed = (old_channel != channel)
+
+      if channel_changed
+        removed_tags = old_tags
+        added_tags = tags
+        category_changed = true
       else
-        data.push({ channel: channel, filter: filter })
+        removed_tags = old_tags - tags
+        added_tags = tags - old_tags
+        category_changed = (old_category_id != category_id)
       end
 
-      data = data.uniq { |i| i['channel'] }
-
-      ::PluginStore.set(PLUGIN_NAME, "category_#{id}", data.uniq)
+      ::PluginStore.remove(DiscourseSlack::PLUGIN_NAME, "_category_#{old_category_id}_#{old_channel}") if old_category_id.present? && category_changed
+      ::PluginStore.set(DiscourseSlack::PLUGIN_NAME, "_category_#{category_id}_#{channel}", id) if category_id.present? && category_changed
+      removed_tags.each{|t| ::PluginStore.remove(DiscourseSlack::PLUGIN_NAME, "_tag_#{t}_#{old_channel}")}
+      added_tags.each{|t| ::PluginStore.set(DiscourseSlack::PLUGIN_NAME, "_tag_#{t}_#{channel}", id)}
     end
 
-    def self.delete_filter(id, channel)
-      data = get_store(id)
-      data.delete_if do |i|
-        i['channel'] === channel
-      end
-      ::PluginStore.set(PLUGIN_NAME, "category_#{id}", data)
+    def self.delete_filter(id)
+      ::PluginStore.remove(DiscourseSlack::PLUGIN_NAME, "filter_#{id}")
+      ::PluginStoreRow.where(plugin_name: DiscourseSlack::PLUGIN_NAME, value: id).where("key ~* :pat", :pat => '^_.*').destroy_all
     end
 
-    def self.get_store(id)
-      (::PluginStore.get(PLUGIN_NAME, "category_#{id}") || [])
+    def self.get_filter(id)
+      (::PluginStore.get(DiscourseSlack::PLUGIN_NAME, "filter_#{id}") || Hash.new)
+    end
+
+    def self.get_category_store(id)
+      ::PluginStoreRow.where(plugin_name: DiscourseSlack::PLUGIN_NAME).where("key ~* :pat", :pat => "^_category_#{id}.*")
+    end
+
+    def self.get_tag_store(value)
+      ::PluginStoreRow.where(plugin_name: DiscourseSlack::PLUGIN_NAME).where("key ~* :pat", :pat => "^_tag_#{value}.*")
     end
 
     def self.notify(id)
@@ -351,7 +467,13 @@ after_initialize do
       uniq_func = proc { |i| i[:channel] }
       sort_func = proc { |a, b| precedence[a] <=> precedence[b] }
 
-      items = get_store(post.topic.category_id) | get_store("*") | get_store(0)
+      rows = get_category_store(post.topic.category_id) | get_category_store("*")
+      post.topic.tags.each do |tag|
+        rows = rows + get_tag_store(tag.name)
+      end
+
+      ids = rows.map(&:value).compact
+      items = ids.collect { |i| get_filter(i) }
       responses = []
 
       items.sort_by(&sort_func).uniq(&uniq_func).each do | i |
@@ -362,7 +484,7 @@ after_initialize do
         if !(SiteSetting.slack_access_token.empty?)
           response = nil
           uri = ""
-          record = ::PluginStore.get(PLUGIN_NAME, "topic_#{post.topic.id}_#{i[:channel]}")
+          record = ::PluginStore.get(DiscourseSlack::PLUGIN_NAME, "topic_#{post.topic.id}_#{i[:channel]}")
 
           if (record.present? && ((Time.now.to_i - record[:ts].split('.')[0].to_i)/ 60) < 5 && record[:message][:attachments].length < 5)
             attachments = record[:message][:attachments]
@@ -388,7 +510,7 @@ after_initialize do
 
           response = http.request(Net::HTTP::Post.new(uri))
 
-          ::PluginStore.set(PLUGIN_NAME, "topic_#{post.topic.id}_#{i[:channel]}", JSON.parse(response.body) )
+          ::PluginStore.set(DiscourseSlack::PLUGIN_NAME, "topic_#{post.topic.id}_#{i[:channel]}", JSON.parse(response.body) )
         elsif !(SiteSetting.slack_outbound_webhook_url.empty?)
           req = Net::HTTP::Post.new(URI(SiteSetting.slack_outbound_webhook_url), 'Content-Type' =>'application/json')
           req.body = message.to_json
@@ -400,7 +522,10 @@ after_initialize do
 
       responses
     end
+
   end
+
+  load File.expand_path("../jobs/onceoff/migrate_legacy_data.rb", __FILE__)
 
   DiscourseEvent.on(:post_created) do |post|
     Jobs.enqueue_in(SiteSetting.post_to_slack_window_secs.seconds, :notify_slack, post_id: post[:id]) if SiteSetting.slack_enabled?
