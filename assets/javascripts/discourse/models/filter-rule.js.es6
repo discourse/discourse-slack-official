@@ -16,7 +16,7 @@ export default RestModel.extend({
         return Discourse.Category.create({ name: '', id: '' });
         break;
       default:
-        return Discourse.Category.findById(id) || { name: I18n.t('slack.choose.deleted_category'), id: id };
+        return Discourse.Category.findById(id) || Discourse.Category.create({ name: I18n.t('slack.choose.deleted_category'), id: id });
     }
   }.property('category_id'),
 
