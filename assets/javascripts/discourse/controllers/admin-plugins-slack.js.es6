@@ -4,7 +4,7 @@ import { popupAjaxError } from 'discourse/lib/ajax-error';
 
 export default Ember.Controller.extend({
   categories: function() {
-    return [Discourse.Category.create({ name: 'All Categories', id: 0, slug: '*'})].concat(Discourse.Category.list());
+    return [Discourse.Category.create({ name: 'All Categories', id: null, slug: null})].concat(Discourse.Category.list());
   }.property(),
 
   filters: [
@@ -15,9 +15,13 @@ export default Ember.Controller.extend({
 
   editing: FilterRule.create({}),
 
+  taggingEnabled: function() {
+    return this.siteSettings.tagging_enabled;
+  }.property(),
+
   actions: {
     edit(rule) {
-      this.set( 'editing', FilterRule.create(rule.getProperties('filter', 'category_id', 'channel')));
+      this.set( 'editing', FilterRule.create(rule.getProperties('filter', 'category_id', 'channel', 'tags')));
     },
 
     save() {
@@ -26,14 +30,15 @@ export default Ember.Controller.extend({
 
       ajax("/slack/list.json", {
         method: 'POST',
-        data: rule.getProperties('filter', 'category_id', 'channel')
+        data: rule.getProperties('filter', 'category_id', 'channel', 'tags')
       }).then(() => {
-        var obj = model.find((x) => ( x.get('category_id') === rule.get('category_id') && x.get('channel') === rule.get('channel') ));
+        var obj = model.find((x) => ( x.get('category_id') === rule.get('category_id') && x.get('channel') === rule.get('channel') && x.get('tags') === rule.get('tags') ));
         if (obj) {
           obj.set('channel', rule.channel);
           obj.set('filter', rule.filter);
+          obj.set('tags', rule.tags);
         } else {
-          model.pushObject(FilterRule.create(rule.getProperties('filter', 'category_id', 'channel')));
+          model.pushObject(FilterRule.create(rule.getProperties('filter', 'category_id', 'channel', 'tags')));
         }
       }).catch(popupAjaxError);
     },
@@ -42,9 +47,9 @@ export default Ember.Controller.extend({
       const model = this.get('model');
 
       ajax("/slack/list.json", { method: 'DELETE',
-        data: rule.getProperties('filter', 'category_id', 'channel')
+        data: rule.getProperties('filter', 'category_id', 'channel', 'tags')
       }).then(() => {
-        var obj = model.find((x) => ( x.get('category_id') === rule.get('category_id') && x.get('channel') === rule.get('channel') ));
+        var obj = model.find((x) => ( x.get('category_id') === rule.get('category_id') && x.get('channel') === rule.get('channel') && x.get('tags') === rule.get('tags') ));
         model.removeObject(obj);
       }).catch(popupAjaxError);
     },

@@ -13,7 +13,7 @@ describe 'Slack' do
 
   describe 'testing notification' do
     it 'should ping slack successfully' do
-      DiscourseSlack::Slack.expects(:notify).with(first_post.id)
+      DiscourseSlack::Slack.expects(:notify)
 
       post '/slack/test.json'
 
