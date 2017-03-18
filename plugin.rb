@@ -334,12 +334,11 @@ after_initialize do
 
       data = get_store(id)
 
-      update = data.index {|i| i['channel'] === channel || i['channel'] === channel_id }
+      update = data.index {|i| (i['channel'] === channel || i['channel'] === channel_id) && i['tags'] === tags }
 
       if update
         data[update]['filter'] = filter
         data[update]['channel'] = channel # fix old IDs
-        data[update]['tags'] = tags
       else
         data.push({ channel: channel, filter: filter, tags: tags })
       end

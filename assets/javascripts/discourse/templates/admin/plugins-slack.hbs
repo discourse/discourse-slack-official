@@ -29,12 +29,12 @@
     {{/each}}
 
     <tr class="new-filter">
-      <td>{{combo-box value=editing.category_id content=categories}}</td>
+      <td>{{combo-box value=editing.category_id content=categories width="200px"}}</td>
       {{#if taggingEnabled}}
-        <td>{{tag-chooser tags=editing.tags placeholderKey="slack.choose.tags"}}</td>
+        <td>{{tag-chooser tags=editing.tags placeholderKey="slack.choose.tags" width="200px"}}</td>
       {{/if}}
-      <td>{{text-field value=editing.channel placeholderKey="slack.choose.channel" class="channel"}}</td>
-      <td>{{combo-box content=filters value=editing.filter none='slack.choose.filter'}}</td>
+      <td>{{text-field value=editing.channel placeholderKey="slack.choose.channel" class="channel" width="200px"}}</td>
+      <td>{{combo-box content=filters value=editing.filter none='slack.choose.filter' width="200px"}}</td>
       <td>
         <div class="pull-right">
           {{d-button action="save" icon="save" class="save btn-primary" title="slack.save"}}

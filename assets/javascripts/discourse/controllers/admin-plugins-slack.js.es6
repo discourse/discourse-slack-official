@@ -4,7 +4,7 @@ import { popupAjaxError } from 'discourse/lib/ajax-error';
 
 export default Ember.Controller.extend({
   categories: function() {
-    return [Discourse.Category.create({ name: 'All Categories', id: null, slug: null})].concat(Discourse.Category.list());
+    return [Discourse.Category.create({ name: 'All Categories', id: '', slug: ''})].concat(Discourse.Category.list());
   }.property(),
 
   filters: [
