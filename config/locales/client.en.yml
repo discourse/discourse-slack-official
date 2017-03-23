@@ -7,18 +7,24 @@ en:
       category: 'Category'
       channel: 'Channel'
       filter: 'Filter'
+      tags: 'Tags'
       test_notification: 'Test Notification'
       reset_settings: 'Reset All Settings'
       edit: 'Edit'
       delete: 'Delete'
       save: 'Save'
       choose:
+        all_categories: 'All categories'
+        deleted_category: 'Deleted category'
         filter: 'Choose a filter'
-        category: 'Choose a category'
+        tags: 'Choose tags'
+        channel: '#channel, @user or Channel ID'
       error:
         category: 'Please choose a category.'
         channel: 'Please enter a channel to post to.'
         filter: 'Please choose a filter.'
+      command:
+        help: "To modify these settings from slack, set up a slash command using <a href='https://github.com/discourse/discourse-slack-official/blob/master/README.md'>these instructions</a>."
       present:
         mute: 'Muting'
         follow: 'First post only'
