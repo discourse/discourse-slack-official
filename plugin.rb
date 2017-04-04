@@ -12,7 +12,7 @@ enabled_site_setting :slack_enabled
 
 PLUGIN_NAME = "discourse-slack-official".freeze
 
-register_asset "stylesheets/slack_admin.scss"
+register_asset "stylesheets/slack-admin.scss"
 
 after_initialize do
 
