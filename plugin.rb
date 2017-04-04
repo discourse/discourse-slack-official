@@ -35,7 +35,7 @@ after_initialize do
 
   require_relative 'slack_parser'
 
-  class ::DiscourseSlack::SlackController < ::ApplicationController
+  class ::DiscourseSlack::SlackController < ApplicationController
     requires_plugin PLUGIN_NAME
 
     before_filter :slack_discourse_username_present?
@@ -112,8 +112,6 @@ after_initialize do
           "##{params[:channel_name]}"
         end
 
-      cmd = "help"
-
       if tokens.size > 0 && tokens.size < 3
         cmd = tokens[0]
       end
@@ -138,8 +136,6 @@ after_initialize do
         else
           render json: { text: DiscourseSlack::Slack.help }
         end
-      when "help"
-        render json: { text: DiscourseSlack::Slack.help }
       when "status"
         render json: { text: DiscourseSlack::Slack.status, link_names: 1 }
       else
@@ -190,17 +186,6 @@ after_initialize do
     def find_topic(topic_id, post_number)
       user = User.find_by(username: SiteSetting.slack_discourse_username)
       TopicView.new(topic_id, user, post_number: post_number)
-    end
-
-    # ----- Access control methods -----
-    def handle_unverified_request
-    end
-
-    def api_key_valid?
-      true
-    end
-
-    def redirect_to_login_if_required
     end
   end
 
@@ -417,13 +402,11 @@ after_initialize do
     post "/knock" => "slack#knock"
     post "/command" => "slack#command"
 
-    post "/test" => "slack#test_notification"
-    post "/reset_settings" => "slack#reset_settings"
-
     get "/list" => "slack#list", constraints: AdminConstraint.new
+    post "/test" => "slack#test_notification", constraints: AdminConstraint.new
+    post "/reset_settings" => "slack#reset_settings", constraints: AdminConstraint.new
     post "/list" => "slack#edit", constraints: AdminConstraint.new
     delete "/list" => "slack#delete", constraints: AdminConstraint.new
-
   end
 
   Discourse::Application.routes.prepend do
@@ -433,7 +416,6 @@ after_initialize do
   add_admin_route "slack.title", "slack"
 
   Discourse::Application.routes.append do
-    get "/admin/plugins/slack" => "admin/plugins#index"
-    get "/admin/plugins/slack/list" => "slack#list"
+    get "/admin/plugins/slack" => "admin/plugins#index", constraints: StaffConstraint.new
   end
 end
