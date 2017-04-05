@@ -1,8 +1,14 @@
-<section id="slack">
+<div id="admin-plugin-slack">
   <h1>{{i18n "slack.header.rules"}}</h1>
+
   <table>
     <tr>
       <th>{{i18n "slack.category"}}</th>
+
+      {{#if siteSettings.tagging_enabled}}
+        <th>{{i18n "slack.tags"}}</th>
+      {{/if}}
+
       <th>{{i18n "slack.channel"}}</th>
       <th>{{i18n "slack.filter"}}</th>
       <th></th>
@@ -10,41 +16,60 @@
 
     {{#each model as |rule|}}
       <tr class="">
-        <td>{{rule.category.name}}</td>
+        <td>{{rule.categoryName}}</td>
+
+        {{#if siteSettings.tagging_enabled}}
+          <td>{{rule.tags}}</td>
+        {{/if}}
+
         <td>{{rule.channel}}</td>
-        <td>{{rule.filter_name}}</td>
+        <td>{{rule.filterName}}</td>
+
         <td>
-          <div class="pull-right">
-            {{d-button action="edit" actionParam=rule icon="pencil" class="edit" title="slack.edit"}}
-            {{d-button action="delete" actionParam=rule icon="trash-o" class="delete btn-danger" title="slack.delete"}}
-          </div>
+          {{!-- {{d-button action="edit" actionParam=rule icon="pencil" class="edit" title="slack.edit"}} --}}
+          {{d-button action="delete" actionParam=rule icon="trash-o" class="delete btn-danger" title="slack.delete"}}
         </td>
       </tr>
     {{/each}}
 
     <tr class="new-filter">
-      <td>{{combo-box value=editing.category_id content=categories}}</td>
-      <td>{{text-field value=editing.channel placeholder='#channel, @user or Channel ID' class="channel"}}</td>
-      <td>{{combo-box content=filters value=editing.filter}}</td>
       <td>
-        <div class="pull-right">
-          {{d-button action="save" icon="save" class="save btn-primary" title="slack.save"}}
-        </div>
+        {{category-chooser
+            value=editing.categoryId
+            rootNoneLabel="slack.choose.all_categories"
+            rootNone=true}}
+      </td>
+
+      {{#if siteSettings.tagging_enabled}}
+        <td>{{tag-chooser tags=editing.tags placeholderKey="slack.choose.tags"}}</td>
+      {{/if}}
+
+      <td>{{text-field value=editing.channel placeholderKey="slack.choose.channel" class="channel"}}</td>
+      <td>{{combo-box content=filters value=editing.filter}}</td>
+
+      <td>
+        {{d-button
+            action="save"
+            icon="save"
+            class="save btn-primary"
+            title="save"
+            disabled=saveDisabled}}
       </td>
     </tr>
   </table>
 
-  {{!-- TODO translate --}}
-  <p>To modify these settings from slack, set up a slash command using <a href="https://github.com/discourse/discourse-slack-official/blob/master/README.md">these instructions</a></p>
+  <p>{{{i18n "slack.command.help"}}}</p>
 
   {{d-button action="testNotification"
       icon="rocket"
-      class="test"
       disabled=testingNotification
       title="slack.test_notification"
       label="slack.test_notification"}}
 
-  {{#d-button action="resetSettings" icon="trash" class="reset" title="slack.reset_settings"}}
-    {{i18n "slack.reset_settings"}}
+  {{#d-button
+      action="resetSettings"
+      icon="trash"
+      title="slack.reset_settings"
+      label="slack.reset_settings"}}
   {{/d-button}}
-</section>
+</div>

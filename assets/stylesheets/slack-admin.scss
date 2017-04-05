@@ -1,6 +1,7 @@
 .admin-detail #slack {
   .new-filter input.channel {
-      margin-bottom: 0px;
+    width: 190px;
+    margin-bottom: 0px;
   }
 
   h1 {
@@ -9,5 +10,9 @@
 
   .error {
     color: #f55959;
+  }
+
+  .admin-contents table .new-filter td {
+    padding: 8px 0;
   }
 }

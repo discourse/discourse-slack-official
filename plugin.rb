@@ -4,168 +4,162 @@
 # authors: Nick Sahler (nicksahler), Dave McClure (mcwumbly) for slack backdoor code.
 # url: https://github.com/discourse/discourse-slack-official
 
-require 'net/http'
-require 'json'
-require File.expand_path('../lib/validators/discourse_slack_enabled_setting_validator.rb', __FILE__)
-
 enabled_site_setting :slack_enabled
-
-PLUGIN_NAME = "discourse-slack-official".freeze
 
 register_asset "stylesheets/slack-admin.scss"
 
-after_initialize do
+load File.expand_path('../lib/validators/discourse_slack_enabled_setting_validator.rb', __FILE__)
 
-  unless ::PluginStore.get(PLUGIN_NAME, "not_first_time")
-    ::PluginStore.set(PLUGIN_NAME, "not_first_time", true)
-    ::PluginStore.set(PLUGIN_NAME, "category_*", [{ category_id: '0', channel: "#general", filter: "follow" }])
-  end
+after_initialize do
+  load File.expand_path('../lib/discourse_slack/slack.rb', __FILE__)
 
   module ::DiscourseSlack
+    PLUGIN_NAME = "discourse-slack-official".freeze
+
     class Engine < ::Rails::Engine
-      engine_name PLUGIN_NAME
+      engine_name DiscourseSlack::PLUGIN_NAME
       isolate_namespace DiscourseSlack
     end
   end
 
-  require_dependency File.expand_path('../jobs/notify_slack.rb', __FILE__)
+  require_dependency File.expand_path('../app/jobs/regular/notify_slack.rb', __FILE__)
   require_dependency 'application_controller'
   require_dependency 'discourse_event'
   require_dependency 'admin_constraint'
 
   require_relative 'slack_parser'
 
-  class ::DiscourseSlack::SlackController < ApplicationController
-    requires_plugin PLUGIN_NAME
+  class ::DiscourseSlack::SlackController < ::ApplicationController
+    requires_plugin DiscourseSlack::PLUGIN_NAME
 
-    before_filter :slack_discourse_username_present?
     before_filter :slack_token_valid?, only: :command
-    before_filter :slack_webhook_or_token_present?
-
-    skip_before_filter :check_xhr, :preload_json, :verify_authenticity_token, except: [:list, :edit, :delete, :test_notification, :reset_settings]
+    skip_before_filter :check_xhr, :preload_json, :verify_authenticity_token, only: :command
 
     def list
-      rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME).where("key ~* :pat", :pat => '^category_.*')
       out = []
 
-      rows.each do |row|
-        ::PluginStore.cast_value(row.type_name, row.value).each do | rule |
-          x = {
-            category_id: row.key.gsub('category_', '').gsub('*', '0'),
-            channel: rule[:channel],
-            filter: rule[:filter]
-          }
+      PluginStoreRow.where(plugin_name: DiscourseSlack::PLUGIN_NAME)
+        .where("key ~* :pat", pat: "^#{DiscourseSlack::Slack::KEY_PREFIX}.*")
+        .each do |row|
 
-          out.push x
+        PluginStore.cast_value(row.type_name, row.value).each do |rule|
+          category_id =
+            if row.key == DiscourseSlack::Slack.get_key
+              nil
+            else
+              row.key.gsub!(DiscourseSlack::Slack::KEY_PREFIX, '')
+              row.key
+            end
+
+          out << {
+            category_id: category_id,
+            channel: rule[:channel],
+            filter: rule[:filter],
+            tags: rule[:tags]
+          }
         end
       end
 
-      render json: (params[:raw]) ? rows : out
+      render json: out
     end
 
     def test_notification
       DiscourseSlack::Slack.notify(
-        Topic.order('RANDOM()').where(closed: false, archived: false)
-          .first.ordered_posts.first.id
+        Topic.order('RANDOM()')
+          .find_by(closed: false, archived: false)
+          .ordered_posts.first.id
       )
 
       render json: success_json
     end
 
     def reset_settings
-      PluginStoreRow.where(plugin_name: PLUGIN_NAME).destroy_all
+      PluginStoreRow.where(plugin_name: DiscourseSlack::PLUGIN_NAME).destroy_all
       render json: success_json
     end
 
-    def is_number? string
-      true if Float(string) rescue false
-    end
-
-    # "0" on the client is usde to represent "all categories" - "*" on the server, to support old versions of the plugin.
     def edit
-      return render json: { message: "Error"}, status: 500 if params[:channel] == '' || !is_number?(params[:category_id])
-      DiscourseSlack::Slack.set_filter_by_id(( params[:category_id] === "0") ? '*' : params[:category_id], params[:channel], params[:filter])
+      params.permit(:tags, :category_id, :filter, :channel)
+      category = Category.find_by(id: params[:category_id])
+      raise Discourse::InvalidParameters.new(:category_id) if category.blank?
+
+      DiscourseSlack::Slack.set_filter_by_id(category.id, params[:channel], params[:filter], params[:tags])
       render json: success_json
     end
 
     def delete
-      return render json: { message: "Error"}, status: 500 if params[:channel] == '' || !is_number?(params[:category_id])
+      params.permit(:tags, :channel, :category_id)
+      category = Category.find_by(id: params[:category_id])
+      raise Discourse::InvalidParameters.new(:category_id) if category.blank?
 
-      DiscourseSlack::Slack.delete_filter('*', params[:channel]) if ( params[:category_id] === "0" )
-      DiscourseSlack::Slack.delete_filter(params[:category_id], params[:channel])
-
+      DiscourseSlack::Slack.delete_filter(category.id, params[:channel], params[:tags])
       render json: success_json
     end
 
     def command
-      guardian = Guardian.new(User.find_by_username(SiteSetting.slack_discourse_username))
+      guardian = DiscourseSlack::Slack.guardian
 
       tokens = params[:text].split(" ")
 
       # channel name fix
       channel =
-        if (params[:channel_name] === "directmessage")
+        case params[:channel_name]
+        when 'directmessage'
           "@#{params[:user_name]}"
-        elsif (params[:channel_name] === "privategroup")
+        when 'privategroup'
           params[:channel_id]
         else
           "##{params[:channel_name]}"
         end
 
-      if tokens.size > 0 && tokens.size < 3
-        cmd = tokens[0]
-      end
-      ## TODO Put back URL finding
-      case cmd
-      when "watch", "follow", "mute"
-        if (tokens.size == 2)
-          category_slug = tokens[1]
-          category = Category.find_by(slug: category_slug)
+      cmd = tokens[0] if tokens.size > 0 && tokens.size < 3
 
-          if (category_slug.casecmp("all") === 0)
-            DiscourseSlack::Slack.set_filter_by_id('*', channel, cmd, params[:channel_id])
-            render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize} all categories* on this channel." }
-          elsif (category && guardian.can_see_category?(category))
-            DiscourseSlack::Slack.set_filter_by_id(category.id, channel, cmd, params[:channel_id])
-            render json: { text: "*#{DiscourseSlack::Slack.filter_to_past(cmd).capitalize}* category *#{category.name}*" }
+      text =
+        case cmd
+        when "watch", "follow", "mute"
+          if (tokens.size == 2)
+            value = tokens[1]
+            filter_to_past = DiscourseSlack::Slack.filter_to_past(cmd).capitalize
+
+            if SiteSetting.tagging_enabled? && value.start_with?('tag:')
+              value.sub!('tag:', '')
+              tag = Tag.find_by(name: value)
+
+              if !tag
+                I18n.t("slack.message.not_found.tag", name: value)
+              else
+                DiscourseSlack::Slack.set_filter_by_id(nil, channel, cmd, [tag.name], params[:channel_id])
+                I18n.t("slack.message.success.tag", command: filter_to_past, name: tag.name)
+              end
+            else
+              if (value.casecmp("all") == 0)
+                DiscourseSlack::Slack.set_filter_by_id(nil, channel, cmd, nil, params[:channel_id])
+                I18n.t("slack.message.success.all_categories", command: filter_to_past)
+              elsif (category = Category.find_by(slug: value)) && guardian.can_see_category?(category)
+                DiscourseSlack::Slack.set_filter_by_id(category.id, channel, cmd, nil, params[:channel_id])
+                I18n.t("slack.message.success.category", command: filter_to_past, name: category.name)
+              else
+                cat_list = (CategoryList.new(guardian).categories.map(&:slug)).join(', ')
+                I18n.t("slack.message.not_found.category", name: tokens[1], list: cat_list)
+              end
+            end
           else
-            # TODO DRY (easy)
-            cat_list = (CategoryList.new(Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)).categories.map { |c| c.slug }).join(', ')
-            render json: { text: "I can't find the *#{tokens[1]}* category. Did you mean: #{cat_list}" }
+            DiscourseSlack::Slack.help
           end
+        when "status"
+          DiscourseSlack::Slack.status
         else
-          render json: { text: DiscourseSlack::Slack.help }
+          DiscourseSlack::Slack.help
         end
-      when "status"
-        render json: { text: DiscourseSlack::Slack.status, link_names: 1 }
-      else
-        render json: { text: DiscourseSlack::Slack.help }
-      end
-    end
 
-    def knock
-      route = topic_route params[:text]
-      post_number = route[:post_number] ? route[:post_number].to_i : 1
-
-      topic = find_topic(route[:topic_id], post_number)
-      post = find_post(topic, post_number)
-
-      render json: DiscourseSlack::Slack.slack_message(post)
+      render json: { text: text }
     end
 
     def slack_token_valid?
-      if SiteSetting.slack_incoming_webhook_token != params[:token]
-        raise Discourse::InvalidAccess.new
-      end
-    end
+      params.require(:token)
 
-    def slack_discourse_username_present?
-      raise Discourse::InvalidAccess.new unless SiteSetting.slack_discourse_username
-    end
-
-    def slack_webhook_or_token_present?
-      if SiteSetting.slack_outbound_webhook_url.blank? &&
-         SiteSetting.slack_access_token.blank?
+      if SiteSetting.slack_incoming_webhook_token.blank? ||
+         SiteSetting.slack_incoming_webhook_token != params[:token]
 
         raise Discourse::InvalidAccess.new
       end
@@ -189,204 +183,9 @@ after_initialize do
     end
   end
 
-  class ::DiscourseSlack::Slack
-    def self.filter_to_present(filter)
-      { 'mute' => 'muting', 'follow' => 'following', 'watch' => 'watching' }[filter]
-    end
-
-    def self.filter_to_past(filter)
-      { 'mute' => 'muted', 'follow' => 'followed', 'watch' => 'watched' }[filter]
-    end
-
-    def self.excerpt(html, max_length)
-      doc = Nokogiri::HTML.fragment(html)
-      doc.css(".lightbox-wrapper .meta").remove
-      html = doc.to_html
-
-      SlackParser.get_excerpt(html, max_length)
-    end
-
-    def self.format_channel(name)
-      (name.include?("@") || name.include?("\#"))? name : "<##{name}>"
-    end
-
-    def self.status
-      rows = PluginStoreRow.where(plugin_name: PLUGIN_NAME)
-      text = ""
-
-      categories = rows.map { |item| item.key.gsub('category_', '').to_i }
-
-      Category.where(id: categories).each do | category |
-        #why
-        get_store(category.id).each do |row|
-          text << "#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} category *#{category.name}*\n"
-        end
-      end
-
-      get_store('*').each do |row|
-        text << "#{format_channel(row[:channel])} is #{filter_to_present(row[:filter])} *all categories*\n"
-      end
-      cat_list = (CategoryList.new(Guardian.new User.find_by_username(SiteSetting.slack_discourse_username)).categories.map { |category| category.slug }).join(', ')
-      text << "\nHere are your available categories: #{cat_list}"
-      text
-    end
-
-    def self.help
-      <<~TEXT
-      `/discourse [watch|follow|mute|help|status] [category|all]`
-      *watch* – notify this channel for new topics and new replies
-      *follow* – notify this channel for new topics
-      *mute* – stop notifying this channel
-      *status* – show current notification state and categories
-      TEXT
-    end
-
-    def self.slack_message(post, channel)
-      display_name = "@#{post.user.username}"
-      full_name = post.user.name || ""
-
-      if !(full_name.strip.empty?) && (full_name.strip.gsub(' ', '_').casecmp(post.user.username) != 0) && (full_name.strip.gsub(' ', '').casecmp(post.user.username) != 0)
-        display_name = "#{full_name} @#{post.user.username}"
-      end
-
-      topic = post.topic
-
-      category = (topic.category.parent_category) ? "[#{topic.category.parent_category.name}/#{topic.category.name}]": "[#{topic.category.name}]"
-
-      icon_url = SiteSetting.slack_icon_url
-      icon_url = absolute(SiteSetting.logo_small_url) if SiteSetting.slack_icon_url.empty?
-
-      message = {
-        channel: channel,
-        username: SiteSetting.title,
-        icon_url: icon_url.to_s,
-        attachments: []
-      }
-
-      summary = {
-        fallback: "#{topic.title} - #{display_name}",
-        author_name: display_name,
-        author_icon: post.user.small_avatar_url,
-        color: "##{topic.category.color}",
-        text: ::DiscourseSlack::Slack.excerpt(post.cooked, SiteSetting.slack_discourse_excerpt_length),
-        mrkdwn_in: ["text"]
-      }
-
-      record = ::PluginStore.get(PLUGIN_NAME, "topic_#{post.topic.id}_#{channel}")
-
-      if (SiteSetting.slack_access_token.empty? || post.is_first_post? || record.blank? || (record.present? &&  ((Time.now.to_i - record[:ts].split('.')[0].to_i)/ 60) >= 5 ))
-        summary[:title] = "#{topic.title} #{(category === '[uncategorized]')? '' : category} #{topic.tags.present? ? topic.tags.map(&:name).join(', ') : ''}"
-        summary[:title_link] = post.full_url
-        summary[:thumb_url] = post.full_url
-      end
-
-      message[:attachments].push(summary)
-      message
-    end
-
-    def self.absolute(raw)
-      url = URI(raw) rescue nil # No icon URL if not valid
-      if url && url.scheme != 'mailto'
-        url.host = Discourse.current_hostname if !(url.host)
-        url.scheme = (SiteSetting.force_https ? "https" : "http") if !(url.scheme)
-      end
-      url
-    end
-
-    def self.set_filter_by_id(id, channel, filter, channel_id = nil)
-      data = get_store(id)
-
-      update = data.index {|i| i['channel'] === channel || i['channel'] === channel_id }
-
-      if update
-        data[update]['filter'] = filter
-        data[update]['channel'] = channel # fix old IDs
-      else
-        data.push({ channel: channel, filter: filter })
-      end
-
-      data = data.uniq { |i| i['channel'] }
-
-      ::PluginStore.set(PLUGIN_NAME, "category_#{id}", data.uniq)
-    end
-
-    def self.delete_filter(id, channel)
-      data = get_store(id)
-
-      data.delete_if do |i|
-        i['channel'] === channel
-      end
-
-      ::PluginStore.set(PLUGIN_NAME, "category_#{id}", data)
-    end
-
-    def self.get_store(id)
-      ::PluginStore.get(PLUGIN_NAME, "category_#{id}") || []
-    end
-
-    def self.notify(id)
-      return if SiteSetting.slack_outbound_webhook_url.blank?
-
-      post = Post.find_by({id: id})
-      return if post.blank? || (post.topic.archetype == Archetype.private_message || post.post_type != Post.types[:regular])
-
-      http = Net::HTTP.new(SiteSetting.slack_access_token.empty? ? "hooks.slack.com" : "slack.com" , 443)
-      http.use_ssl = true
-
-      precedence = { 'mute' => 0, 'watch' => 1, 'follow' => 1 }
-
-      uniq_func = proc { |i| i[:channel] }
-      sort_func = proc { |a, b| precedence[a] <=> precedence[b] }
-
-      items = get_store(post.topic.category_id) | get_store("*") | get_store(0)
-      responses = []
-
-      items.sort_by(&sort_func).uniq(&uniq_func).each do | i |
-        next if ( i[:filter] === 'mute') || ( !(post.is_first_post?) && i[:filter] == 'follow' )
-
-        message = slack_message(post, i[:channel])
-
-        if !(SiteSetting.slack_access_token.empty?)
-          response = nil
-          uri = ""
-          record = ::PluginStore.get(PLUGIN_NAME, "topic_#{post.topic.id}_#{i[:channel]}")
-
-          if (record.present? && ((Time.now.to_i - record[:ts].split('.')[0].to_i)/ 60) < 5 && record[:message][:attachments].length < 5)
-            attachments = record[:message][:attachments]
-            attachments.concat message[:attachments]
-
-            uri = URI("https://slack.com/api/chat.update" +
-              "?token=#{SiteSetting.slack_access_token}" +
-              "&username=#{CGI::escape(record[:message][:username])}" +
-              "&text=#{CGI::escape(record[:message][:text])}" +
-              "&channel=#{record[:channel]}" +
-              "&attachments=#{CGI::escape(attachments.to_json)}" +
-              "&ts=#{record[:ts]}"
-            )
-          else
-            uri = URI("https://slack.com/api/chat.postMessage" +
-              "?token=#{SiteSetting.slack_access_token}" +
-              "&username=#{CGI::escape(message[:username])}" +
-              "&icon_url=#{CGI::escape(message[:icon_url])}" +
-              "&channel=#{ message[:channel].gsub('#', '') }" +
-              "&attachments=#{CGI::escape(message[:attachments].to_json)}"
-            )
-          end
-
-          response = http.request(Net::HTTP::Post.new(uri))
-
-          ::PluginStore.set(PLUGIN_NAME, "topic_#{post.topic.id}_#{i[:channel]}", JSON.parse(response.body) )
-        elsif !(SiteSetting.slack_outbound_webhook_url.empty?)
-          req = Net::HTTP::Post.new(URI(SiteSetting.slack_outbound_webhook_url), 'Content-Type' =>'application/json')
-          req.body = message.to_json
-          response = http.request(req)
-        end
-
-        responses.push(response.body) if response
-      end
-
-      responses
-    end
+  if !PluginStore.get(DiscourseSlack::PLUGIN_NAME, "not_first_time") && !Rails.env.test?
+    PluginStore.set(DiscourseSlack::PLUGIN_NAME, "not_first_time", true)
+    PluginStore.set(DiscourseSlack::PLUGIN_NAME, DiscourseSlack::Slack.get_key, [{ channel: "#general", filter: "follow", tags: nil }])
   end
 
   DiscourseEvent.on(:post_created) do |post|
@@ -399,13 +198,12 @@ after_initialize do
   end
 
   DiscourseSlack::Engine.routes.draw do
-    post "/knock" => "slack#knock"
     post "/command" => "slack#command"
 
     get "/list" => "slack#list", constraints: AdminConstraint.new
-    post "/test" => "slack#test_notification", constraints: AdminConstraint.new
-    post "/reset_settings" => "slack#reset_settings", constraints: AdminConstraint.new
-    post "/list" => "slack#edit", constraints: AdminConstraint.new
+    put "/test" => "slack#test_notification", constraints: AdminConstraint.new
+    put "/reset_settings" => "slack#reset_settings", constraints: AdminConstraint.new
+    put "/list" => "slack#edit", constraints: AdminConstraint.new
     delete "/list" => "slack#delete", constraints: AdminConstraint.new
   end
 

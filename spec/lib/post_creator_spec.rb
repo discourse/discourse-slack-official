@@ -7,6 +7,7 @@ RSpec.describe PostCreator do
   before do
     SiteSetting.slack_outbound_webhook_url = "https://hooks.slack.com/services/abcde"
     SiteSetting.queue_jobs = true
+    Jobs::NotifySlack.jobs.clear
   end
 
   describe 'when a post is created' do
