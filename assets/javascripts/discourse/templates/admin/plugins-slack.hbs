@@ -25,7 +25,7 @@
     <tr class="new-filter">
       <td>{{combo-box value=editing.category_id content=categories}}</td>
       <td>{{text-field value=editing.channel placeholder='#channel, @user or Channel ID' class="channel"}}</td>
-      <td>{{combo-box content=filters value=editing.filter none='slack.choose.filter'}}</td>
+      <td>{{combo-box content=filters value=editing.filter}}</td>
       <td>
         <div class="pull-right">
           {{d-button action="save" icon="save" class="save btn-primary" title="slack.save"}}

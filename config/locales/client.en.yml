@@ -12,9 +12,6 @@ en:
       edit: 'Edit'
       delete: 'Delete'
       save: 'Save'
-      choose:
-        filter: 'Choose a filter'
-        category: 'Choose a category'
       error:
         category: 'Please choose a category.'
         channel: 'Please enter a channel to post to.'
