@@ -39,6 +39,25 @@ describe Jobs::NotifySlack do
 
       expect(response[0]).to eq("success")
     end
+
+    it "should notify if user have permission to see the post" do
+      category = Fabricate(:category, read_restricted: true)
+      topic = Fabricate(:topic, category: category)
+      post = Fabricate(:post, topic: topic)
+      user = Fabricate(:user)
+
+      SiteSetting.slack_discourse_username = user.username
+      DiscourseSlack::Slack.set_filter_by_id(nil, "#general", "follow")
+
+      response = Jobs::NotifySlack.new.execute(post_id: post.id)
+      expect(response).to eq(nil)
+
+      category.read_restricted = false
+      category.save!
+
+      response = Jobs::NotifySlack.new.execute(post_id: post.id)
+      expect(response[0]).to eq("success")
+    end
   end
 
 end
