@@ -80,19 +80,15 @@ after_initialize do
 
     def edit
       params.permit(:tags, :category_id, :filter, :channel)
-      category = Category.find_by(id: params[:category_id])
-      raise Discourse::InvalidParameters.new(:category_id) if category.blank?
 
-      DiscourseSlack::Slack.set_filter_by_id(category.id, params[:channel], params[:filter], params[:tags])
+      DiscourseSlack::Slack.set_filter_by_id(params[:category_id], params[:channel], params[:filter], params[:tags])
       render json: success_json
     end
 
     def delete
       params.permit(:tags, :channel, :category_id)
-      category = Category.find_by(id: params[:category_id])
-      raise Discourse::InvalidParameters.new(:category_id) if category.blank?
 
-      DiscourseSlack::Slack.delete_filter(category.id, params[:channel], params[:tags])
+      DiscourseSlack::Slack.delete_filter(params[:category_id], params[:channel], params[:tags])
       render json: success_json
     end
 

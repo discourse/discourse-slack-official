@@ -87,14 +87,6 @@ describe 'Slack', type: :request do
           "tags" => [tag.name]
         ])
       end
-
-      describe 'when category id is invalid' do
-        it 'should raise the right error' do
-          expect do
-            put '/slack/list.json', channel: 'somechannel', category_id: -2
-          end.to raise_error(Discourse::InvalidParameters)
-        end
-      end
     end
   end
 

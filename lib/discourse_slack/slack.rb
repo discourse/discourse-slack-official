@@ -127,12 +127,12 @@ module DiscourseSlack
         data.push(channel: channel, filter: filter, tags: tags)
       end
 
->>>>>>> 6e174f8... fixup! FEATURE: Add ability to filter by tags.
       PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(id), data)
     end
 
     def self.delete_filter(id, channel, tags)
       data = get_store(id)
+      tags = nil if tags.blank?
 
       data.delete_if do |i|
         i['channel'] == channel && i['tags'] == tags
