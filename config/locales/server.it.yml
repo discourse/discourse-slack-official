@@ -1,11 +1,11 @@
 it:
   site_settings:
     slack_enabled: 'Abilita discourse-slack-official plugin'
-    slack_discourse_username: 'Nome dell'utente abilitato al recupero dei contenuti'
+    slack_discourse_username: "Nome dell'utente abilitato al recupero dei contenuti"
     slack_incoming_webhook_token: 'Token inviato nel payload da Slack outoing webhook'
     slack_outbound_webhook_url: 'URL per le richieste in uscita da slack'
     slack_discourse_excerpt_length: 'Lunghezza estratto del messaggio'
-    slack_icon_url: 'Icona da inviare a slack (Il valore predefinito è l'icona del forum)'
+    slack_icon_url: "Icona da inviare a slack (Il valore predefinito è l'icona del forum)"
     slack_access_token: 'Token se stai usando le Web API invece dei webhooks'
     post_to_slack_window_secs: 'Aspetta (n) secondi prima di pubblicare su slack, per dare agli utenti la possibilità di modificare e finalizzare i loro messaggi.'
     errors:
