@@ -154,7 +154,7 @@ describe 'Slack', type: :request do
           expect(DiscourseSlack::Slack.get_store(category.id)).to eq([
             "channel" => "#welcome",
             "filter" => "follow",
-            "tags" => []
+            "tags" => nil
           ])
         end
 
@@ -196,7 +196,7 @@ describe 'Slack', type: :request do
           expect(DiscourseSlack::Slack.get_store(category.id)).to eq([
             "channel" => "#welcome",
             "filter" => "mute",
-            "tags" => []
+            "tags" => nil
           ])
         end
 
