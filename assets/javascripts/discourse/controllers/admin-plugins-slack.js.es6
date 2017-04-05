@@ -41,7 +41,7 @@ export default Ember.Controller.extend({
             channel: rule.channel,
             filter: rule.filter,
             tags: rule.tags
-          })
+          });
         } else {
           model.pushObject(FilterRule.create(rule.getProperties('filter', 'category_id', 'channel', 'tags')));
         }
