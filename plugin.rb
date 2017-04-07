@@ -6,11 +6,12 @@
 
 enabled_site_setting :slack_enabled
 
-register_asset "stylesheets/slack-admin.scss"
+register_asset "stylesheets/slack-admin.scss", :admin
 
 load File.expand_path('../lib/validators/discourse_slack_enabled_setting_validator.rb', __FILE__)
 
 after_initialize do
+  load File.expand_path('../lib/discourse_slack/api.rb', __FILE__)
   load File.expand_path('../lib/discourse_slack/slack.rb', __FILE__)
   load File.expand_path('../lib/discourse_slack/slack_message_formatter.rb', __FILE__)
 
@@ -24,6 +25,7 @@ after_initialize do
   end
 
   require_dependency File.expand_path('../app/jobs/regular/notify_slack.rb', __FILE__)
+  require_dependency File.expand_path('../app/jobs/scheduled/sync_slack.rb', __FILE__)
   require_dependency 'application_controller'
   require_dependency 'discourse_event'
   require_dependency 'admin_constraint'
@@ -181,6 +183,24 @@ after_initialize do
       user = User.find_by(username: SiteSetting.slack_discourse_username)
       TopicView.new(topic_id, user, post_number: post_number)
     end
+
+    def channels
+      render json: DiscourseSlack::Slack.channels
+    end
+
+    def messages
+      result = DiscourseSlack::API.messages(params.require(:channel), params.require(:count))
+
+      result["messages"].map do |message|
+        if message["user"].present?
+          id = message["user"]
+          user = DiscourseSlack::Slack.user(id)
+          message["user"] = user["name"] if user.present?
+        end
+      end
+
+      render json: result
+    end
   end
 
   if !PluginStore.get(DiscourseSlack::PLUGIN_NAME, "not_first_time") && !Rails.env.test?
@@ -205,6 +225,9 @@ after_initialize do
     put "/reset_settings" => "slack#reset_settings", constraints: AdminConstraint.new
     put "/list" => "slack#edit", constraints: AdminConstraint.new
     delete "/list" => "slack#delete", constraints: AdminConstraint.new
+
+    get "/channels" => "slack#channels", constraints: AdminConstraint.new
+    get "/messages" => "slack#messages", constraints: AdminConstraint.new
   end
 
   Discourse::Application.routes.prepend do
@@ -215,5 +238,6 @@ after_initialize do
 
   Discourse::Application.routes.append do
     get "/admin/plugins/slack" => "admin/plugins#index", constraints: StaffConstraint.new
+    get "/admin/plugins/slack/:page" => "admin/plugins#index", constraints: StaffConstraint.new
   end
 end

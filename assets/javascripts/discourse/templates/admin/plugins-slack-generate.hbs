@@ -1,0 +1,11 @@
+<p>{{i18n 'slack.generate_topic_desc'}}</p>
+
+<div class='admin-controls'>
+  <div class='span7 controls'>
+    <label>{{i18n 'slack.field.channel'}}</label>
+    {{combo-box content=model value=channel none="slack.field.select_channel"}}
+    <label>{{i18n 'slack.field.count'}}</label>
+    {{text-field value=count}}
+    <button class='btn' {{action "fetch"}}>{{i18n 'slack.button.fetch'}}</button>
+  </div>
+</div>

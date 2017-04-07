@@ -41,3 +41,7 @@ en:
         mute: 'muting'
         follow: 'following'
         watch: 'watching'
+    errors:
+      access_token_is_empty: "Slack access token is empty"
+      channel_not_found: "Slack channel not found"
+      invalid_response: "Invalid slack response"

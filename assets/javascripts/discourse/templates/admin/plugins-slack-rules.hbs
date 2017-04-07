@@ -1,0 +1,73 @@
+<div id="slack-rules">
+  <table>
+    <tr>
+      <th>{{i18n "slack.category"}}</th>
+
+      {{#if siteSettings.tagging_enabled}}
+        <th>{{i18n "slack.tags"}}</th>
+      {{/if}}
+
+      <th>{{i18n "slack.channel"}}</th>
+      <th>{{i18n "slack.filter"}}</th>
+      <th></th>
+    </tr>
+
+    {{#each model as |rule|}}
+      <tr class="">
+        <td>{{rule.categoryName}}</td>
+
+        {{#if siteSettings.tagging_enabled}}
+          <td>{{rule.tags}}</td>
+        {{/if}}
+
+        <td>{{rule.channel}}</td>
+        <td>{{rule.filterName}}</td>
+
+        <td>
+          {{!-- {{d-button action="edit" actionParam=rule icon="pencil" class="edit" title="slack.edit"}} --}}
+          {{d-button action="delete" actionParam=rule icon="trash-o" class="delete btn-danger" title="slack.delete"}}
+        </td>
+      </tr>
+    {{/each}}
+
+    <tr class="new-filter">
+      <td>
+        {{category-chooser
+            value=editing.categoryId
+            rootNoneLabel="slack.choose.all_categories"
+            rootNone=true}}
+      </td>
+
+      {{#if siteSettings.tagging_enabled}}
+        <td>{{tag-chooser tags=editing.tags placeholderKey="slack.choose.tags"}}</td>
+      {{/if}}
+
+      <td>{{text-field value=editing.channel placeholderKey="slack.choose.channel" class="channel"}}</td>
+      <td>{{combo-box content=filters value=editing.filter}}</td>
+
+      <td>
+        {{d-button
+            action="save"
+            icon="save"
+            class="save btn-primary"
+            title="save"
+            disabled=saveDisabled}}
+      </td>
+    </tr>
+  </table>
+
+  <p>{{{i18n "slack.command.help"}}}</p>
+
+  {{d-button action="testNotification"
+      icon="rocket"
+      disabled=testingNotification
+      title="slack.test_notification"
+      label="slack.test_notification"}}
+
+  {{#d-button
+      action="resetSettings"
+      icon="trash"
+      title="slack.reset_settings"
+      label="slack.reset_settings"}}
+  {{/d-button}}
+</div>

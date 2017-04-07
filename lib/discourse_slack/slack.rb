@@ -227,5 +227,34 @@ module DiscourseSlack
 
       responses
     end
+
+    def self.sync
+      DiscourseSlack::API.sync_channels
+      DiscourseSlack::API.sync_users
+    end
+
+    def self.channels
+      channels = []
+
+      result = PluginStore.get(DiscourseSlack::PLUGIN_NAME, "slack_channels")
+      channels = result.values if result.present?
+
+      channels
+    end
+
+    def self.users
+      users = []
+
+      result = PluginStore.get(DiscourseSlack::PLUGIN_NAME, "slack_users")
+      users = result.values if result.present?
+
+      users
+    end
+
+    def self.user(id)
+      users = PluginStore.get(DiscourseSlack::PLUGIN_NAME, "slack_users")
+
+      users[id]
+    end
   end
 end

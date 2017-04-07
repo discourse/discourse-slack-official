@@ -1,4 +1,4 @@
-.admin-detail #slack {
+.admin-slack {
   .new-filter input.channel {
     width: 190px;
     margin-bottom: 0px;
@@ -14,5 +14,9 @@
 
   .admin-contents table .new-filter td {
     padding: 8px 0;
+  }
+
+  .admin-controls input[type="text"] {
+    float: none;
   }
 }
