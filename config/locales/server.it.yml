@@ -10,7 +10,7 @@ it:
     post_to_slack_window_secs: 'Aspetta (n) secondi prima di pubblicare su slack, per dare agli utenti la possibilità di modificare e finalizzare i loro messaggi.'
     errors:
       invalid_webhook_url: "'slack outbound webhook url' non è un URL valido."
-      slack_outbound_webhook_url_is_empty: "Devi configurare 'slack outbound webhook url' prima di abilitare questa impostazione."
+      slack_api_configs_are_empty: "Devi configurare 'slack outbound webhook url' or 'slack access token' prima di abilitare questa impostazione."
       slack_discourse_username_is_empty: "Devi configurare 'slack discourse username' prima di abilitare questa impostazione."
   slack:
     message:

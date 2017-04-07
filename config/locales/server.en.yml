@@ -10,7 +10,7 @@ en:
     post_to_slack_window_secs: 'Wait (n) seconds before posting to slack, to give users a chance to edit and finalize their posts.'
     errors:
       invalid_webhook_url: "'slack outbound webhook url' is not a valid URL."
-      slack_outbound_webhook_url_is_empty: "You must set 'slack outbound webhook url' before enabling this setting."
+      slack_api_configs_are_empty: "You must set 'slack outbound webhook url' or 'slack access token' before enabling this setting."
       slack_discourse_username_is_empty: "You must set 'slack discourse username' before enabling this setting."
   slack:
     message:
