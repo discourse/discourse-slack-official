@@ -147,7 +147,7 @@ after_initialize do
             DiscourseSlack::Slack.help
           end
         when "status"
-          DiscourseSlack::Slack.status
+          DiscourseSlack::Slack.status(channel)
         else
           DiscourseSlack::Slack.help
         end
