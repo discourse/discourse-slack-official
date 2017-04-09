@@ -22,9 +22,9 @@ en:
         category: "*%{command}* category *%{name}*"
         tag: "*%{command}* tag *%{name}*"
       status:
-        all_categories: "%{channel} is %{command} *all categories*\n"
-        category: "%{channel} is %{command} category *%{name}*\n"
-        tags: "%{channel} is %{command} tags *%{list}*\n"
+        all_categories: "%{channel} is %{command} *all categories*"
+        category: "%{channel} is %{command} category *%{name}*"
+        with_tags: " with tags *%{tags}*"
       available_categories: "\nHere are your available categories: %{list}"
     help: |
       `/discourse [watch|follow|mute|help|status] [category|tag:name|all]`

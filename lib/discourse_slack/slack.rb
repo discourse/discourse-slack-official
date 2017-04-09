@@ -22,6 +22,17 @@ module DiscourseSlack
       (name.include?("@") || name.include?("\#"))? name : "<##{name}>"
     end
 
+    def self.format_tags(names)
+      return "" unless SiteSetting.tagging_enabled? && names.present?
+
+      I18n.t("slack.message.status.with_tags", tags: names.join(", "))
+    end
+
+    def self.available_categories
+      cat_list = (CategoryList.new(guardian).categories.map { |category| category.slug }).join(', ')
+      I18n.t("slack.message.available_categories", list: cat_list)
+    end
+
     def self.status
       rows = PluginStoreRow.where(plugin_name: DiscourseSlack::PLUGIN_NAME).where("key ~* :pat", :pat => '^category_.*')
       text = ""
@@ -30,24 +41,21 @@ module DiscourseSlack
 
       Category.where(id: categories).each do | category |
         get_store(category.id).each do |row|
-          tag_list = row['tags'].present? ? row['tags'].join(', ') : ""
           text << I18n.t("slack.message.status.category",
                           channel: format_channel(row[:channel]),
                           command: filter_to_present(row[:filter]),
-                          name: category.name,
-                          tags: tag_list)
+                          name: category.name)
+          text << format_tags(row[:tags]) << "\n"
         end
       end
 
       get_store.each do |row|
-        tag_list = row['tags'].present? ? row['tags'].join(', ') : ""
         text << I18n.t("slack.message.status.all_categories",
                         channel: format_channel(row[:channel]),
-                        command: filter_to_present(row[:filter]),
-                        tags: tag_list)
+                        command: filter_to_present(row[:filter]))
+        text << format_tags(row[:tags]) << "\n"
       end
-      cat_list = (CategoryList.new(guardian).categories.map { |category| category.slug }).join(', ')
-      text << I18n.t("slack.message.available_categories", list: cat_list)
+      text << available_categories
       text
     end
 
