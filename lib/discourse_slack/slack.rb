@@ -110,6 +110,13 @@ module DiscourseSlack
       "#{KEY_PREFIX}#{id.present? ? id : '*'}"
     end
 
+    def self.absolute(raw)
+      url = URI(raw) rescue nil # No icon URL if not valid
+      url.host = Discourse.current_hostname if url != nil && !(url.host)
+      url.scheme = (SiteSetting.force_https ? "https" : "http") if url != nil && !(url.scheme)
+      url
+    end
+
     def self.set_filter_by_id(id, channel, filter, tags = nil, channel_id = nil)
       data = get_store(id)
       tags = Tag.where(name: tags).pluck(:name)
