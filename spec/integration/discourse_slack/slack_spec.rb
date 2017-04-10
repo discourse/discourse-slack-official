@@ -116,6 +116,18 @@ describe 'Slack', type: :request do
   end
 
   describe 'slash commands endpoint' do
+    describe 'when forum is private' do
+      it 'should not redirect to login page' do
+        SiteSetting.login_required = true
+        token = 'sometoken'
+        SiteSetting.slack_incoming_webhook_token = token
+
+        post '/slack/command.json', text: 'help', token: token
+
+        expect(response.status).to eq(200)
+      end
+    end
+
     describe 'when the token is invalid' do
       it 'should raise the right error' do
         expect { post '/slack/command.json', text: 'help' }

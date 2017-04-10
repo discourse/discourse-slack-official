@@ -32,7 +32,12 @@ after_initialize do
     requires_plugin DiscourseSlack::PLUGIN_NAME
 
     before_filter :slack_token_valid?, only: :command
-    skip_before_filter :check_xhr, :preload_json, :verify_authenticity_token, only: :command
+
+    skip_before_filter :check_xhr,
+                       :preload_json,
+                       :verify_authenticity_token,
+                       :redirect_to_login_if_required,
+                       only: :command
 
     def list
       out = []
