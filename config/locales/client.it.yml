@@ -23,7 +23,7 @@ it:
         channel: 'Per favore inserisci un canale per inviare messaggi.'
         filter: 'Per favore scegli un filtro.'
       command:
-        help: "Per modificare queste impostazioni da slack, imposta uno slash command usando <a href='https://github.com/discourse/discourse-slack-official/blob/master/README.md'>queste istruzioni</a>."
+        help: "Per modificare queste impostazioni da slack, imposta uno slash command usando <a href='https://meta.discourse.org/t/configuring-slack-for-discourse-slack-plugin/52990'>queste istruzioni</a>."
       present:
         mute: 'Silenzia'
         follow: 'Solo il primo messaggio'
