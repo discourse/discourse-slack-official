@@ -178,6 +178,8 @@ describe 'Slack', type: :request do
             channel_name: 'welcome',
             token: token
 
+          expect(response).to be_success
+
           json = JSON.parse(response.body)
 
           expect(json["text"]).to eq(I18n.t(
@@ -188,6 +190,21 @@ describe 'Slack', type: :request do
             "channel" => "#welcome",
             "filter" => "follow",
             "tags" => [tag.name]
+          ])
+
+          tag_2 = Fabricate(:tag)
+
+          post "/slack/command.json",
+            text: "follow tag:#{tag_2.name}",
+            channel_name: 'welcome',
+            token: token
+
+          expect(response).to be_success
+
+          expect(DiscourseSlack::Slack.get_store).to eq([
+            "channel" => "#welcome",
+            "filter" => "follow",
+            "tags" => [tag.name, tag_2.name]
           ])
         end
       end

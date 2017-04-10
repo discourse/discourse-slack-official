@@ -122,7 +122,7 @@ module DiscourseSlack
       if index
         data[index]['filter'] = filter
         data[index]['channel'] = channel
-        data[index]['tags'] = tags
+        data[index]['tags'] = data[index]['tags'].concat(tags).uniq
       else
         data.push(channel: channel, filter: filter, tags: tags)
       end
