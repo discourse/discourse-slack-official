@@ -47,11 +47,11 @@ module DiscourseSlack
           elsif attributes["title"]
             characters("#{attributes["title"]}")
           else
-            characters("#{I18n.t 'excerpt_image'}")
+            characters("#{I18n.t('excerpt_image')}")
           end
         when "a"
           attributes = Hash[*attributes.flatten]
-          url = ::DiscourseSlack::Slack.absolute(attributes['href'])
+          url = absolute_url(attributes['href'])
           characters("<#{url}|", false, false, false)
           @in_a = true
         when "aside"
@@ -100,5 +100,14 @@ module DiscourseSlack
       @excerpt << encode.call(string)
       @current_length += string.length if count_it
     end
+
+    private
+
+      def absolute_url(url)
+        uri = URI(url) rescue url
+        uri.host = Discourse.current_host if !uri.host
+        uri.scheme = (SiteSetting.force_https ? 'https' : 'http') if !uri.scheme
+        uri.to_s
+      end
   end
 end
