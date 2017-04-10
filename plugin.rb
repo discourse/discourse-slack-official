@@ -12,6 +12,7 @@ load File.expand_path('../lib/validators/discourse_slack_enabled_setting_validat
 
 after_initialize do
   load File.expand_path('../lib/discourse_slack/slack.rb', __FILE__)
+  load File.expand_path('../lib/discourse_slack/slack_parser.rb', __FILE__)
 
   module ::DiscourseSlack
     PLUGIN_NAME = "discourse-slack-official".freeze
@@ -26,8 +27,6 @@ after_initialize do
   require_dependency 'application_controller'
   require_dependency 'discourse_event'
   require_dependency 'admin_constraint'
-
-  require_relative 'slack_parser'
 
   class ::DiscourseSlack::SlackController < ::ApplicationController
     requires_plugin DiscourseSlack::PLUGIN_NAME
