@@ -12,7 +12,7 @@ load File.expand_path('../lib/validators/discourse_slack_enabled_setting_validat
 
 after_initialize do
   load File.expand_path('../lib/discourse_slack/slack.rb', __FILE__)
-  load File.expand_path('../lib/discourse_slack/slack_parser.rb', __FILE__)
+  load File.expand_path('../lib/discourse_slack/slack_message_formatter.rb', __FILE__)
 
   module ::DiscourseSlack
     PLUGIN_NAME = "discourse-slack-official".freeze
