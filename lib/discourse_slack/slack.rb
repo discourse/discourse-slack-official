@@ -151,10 +151,10 @@ module DiscourseSlack
 
     def self.notify(id)
       post = Post.find_by(id: id)
-      return if post.blank?
+      return if post.blank? || post.post_type != Post.types[:regular] || !guardian.can_see?(post)
 
       topic = post.topic
-      return if post.topic.blank? && (post.topic.archetype == Archetype.private_message || post.post_type != Post.types[:regular])
+      return if topic.blank? || topic.archetype == Archetype.private_message
 
       http = Net::HTTP.new(SiteSetting.slack_access_token.empty? ? "hooks.slack.com" : "slack.com" , 443)
       http.use_ssl = true
