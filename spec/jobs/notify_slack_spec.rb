@@ -11,7 +11,7 @@ describe Jobs::NotifySlack do
   end
 
   before do
-    FakeWeb.register_uri(:post, SiteSetting.slack_outbound_webhook_url, body: "success")
+    stub_request(:post, SiteSetting.slack_outbound_webhook_url).to_return(body: "success")
   end
 
   context '#notify' do
