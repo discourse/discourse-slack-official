@@ -40,7 +40,7 @@ module DiscourseSlack
       categories = rows.map { |item| item.key.gsub('category_', '') }
 
       Category.where(id: categories).each do | category |
-        get_store(category.id).select{ |r| format_channel(r[:channel]) == channel }.each do |row|
+        get_store_by_channel(channel, category.id).each do |row|
           text << I18n.t("slack.message.status.category",
                           command: filter_to_present(row[:filter]),
                           name: category.name)
@@ -48,7 +48,7 @@ module DiscourseSlack
         end
       end
 
-      get_store.select{ |r| format_channel(r[:channel]) == channel }.each do |row|
+      get_store_by_channel(channel).each do |row|
         text << I18n.t("slack.message.status.all_categories",
                         command: filter_to_present(row[:filter]))
         text << format_tags(row[:tags]) << "\n"
@@ -153,6 +153,10 @@ module DiscourseSlack
 
     def self.get_store(id = nil)
       PluginStore.get(DiscourseSlack::PLUGIN_NAME, get_key(id)) || []
+    end
+
+    def self.get_store_by_channel(channel, category_id = nil)
+      get_store(category_id).select{ |r| format_channel(r[:channel]) == channel }
     end
 
     def self.notify(id)
