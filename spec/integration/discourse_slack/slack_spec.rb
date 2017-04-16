@@ -165,7 +165,6 @@ describe 'Slack', type: :request do
           json = JSON.parse(response.body)
 
           text = I18n.t("slack.message.status.category",
-                   channel: "#welcome",
                    command: DiscourseSlack::Slack.filter_to_present("follow"),
                    name: category.name) << "\n"
           text << DiscourseSlack::Slack.available_categories
@@ -243,7 +242,6 @@ describe 'Slack', type: :request do
           json = JSON.parse(response.body)
 
           text = I18n.t("slack.message.status.all_categories",
-                   channel: "#welcome",
                    command: DiscourseSlack::Slack.filter_to_present("mute"))
           text << I18n.t("slack.message.status.with_tags", tags: tag.name) << "\n"
           text << DiscourseSlack::Slack.available_categories

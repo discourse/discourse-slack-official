@@ -22,8 +22,8 @@ en:
         category: "*%{command}* category *%{name}*"
         tag: "*%{command}* tag *%{name}*"
       status:
-        all_categories: "%{channel} is %{command} *all categories*"
-        category: "%{channel} is %{command} category *%{name}*"
+        all_categories: "This channel is %{command} *all categories*"
+        category: "This channel is %{command} category *%{name}*"
         with_tags: " with tags *%{tags}*"
       available_categories: "\nHere are your available categories: %{list}"
     help: |

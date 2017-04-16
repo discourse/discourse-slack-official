@@ -33,25 +33,23 @@ module DiscourseSlack
       I18n.t("slack.message.available_categories", list: cat_list)
     end
 
-    def self.status
+    def self.status(channel)
       rows = PluginStoreRow.where(plugin_name: DiscourseSlack::PLUGIN_NAME).where("key ~* :pat", :pat => '^category_.*')
       text = ""
 
       categories = rows.map { |item| item.key.gsub('category_', '') }
 
       Category.where(id: categories).each do | category |
-        get_store(category.id).each do |row|
+        get_store(category.id).select{ |r| format_channel(r[:channel]) == channel }.each do |row|
           text << I18n.t("slack.message.status.category",
-                          channel: format_channel(row[:channel]),
                           command: filter_to_present(row[:filter]),
                           name: category.name)
           text << format_tags(row[:tags]) << "\n"
         end
       end
 
-      get_store.each do |row|
+      get_store.select{ |r| format_channel(r[:channel]) == channel }.each do |row|
         text << I18n.t("slack.message.status.all_categories",
-                        channel: format_channel(row[:channel]),
                         command: filter_to_present(row[:filter]))
         text << format_tags(row[:tags]) << "\n"
       end
