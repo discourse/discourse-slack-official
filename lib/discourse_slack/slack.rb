@@ -23,32 +23,38 @@ module DiscourseSlack
       (name.include?("@") || name.include?("\#"))? name : "<##{name}>"
     end
 
-    def self.status
+    def self.format_tags(names)
+      return "" unless SiteSetting.tagging_enabled? && names.present?
+
+      I18n.t("slack.message.status.with_tags", tags: names.join(", "))
+    end
+
+    def self.available_categories
+      cat_list = (CategoryList.new(guardian).categories.map { |category| category.slug }).join(', ')
+      I18n.t("slack.message.available_categories", list: cat_list)
+    end
+
+    def self.status(channel)
       rows = PluginStoreRow.where(plugin_name: DiscourseSlack::PLUGIN_NAME).where("key ~* :pat", :pat => '^category_.*')
       text = ""
 
       categories = rows.map { |item| item.key.gsub('category_', '') }
 
       Category.where(id: categories).each do | category |
-        get_store(category.id).each do |row|
-          tag_list = row['tags'].present? ? row['tags'].join(', ') : ""
+        get_store_by_channel(channel, category.id).each do |row|
           text << I18n.t("slack.message.status.category",
-                          channel: format_channel(row[:channel]),
                           command: filter_to_present(row[:filter]),
-                          name: category.name,
-                          tags: tag_list)
+                          name: category.name)
+          text << format_tags(row[:tags]) << "\n"
         end
       end
 
-      get_store.each do |row|
-        tag_list = row['tags'].present? ? row['tags'].join(', ') : ""
+      get_store_by_channel(channel).each do |row|
         text << I18n.t("slack.message.status.all_categories",
-                        channel: format_channel(row[:channel]),
-                        command: filter_to_present(row[:filter]),
-                        tags: tag_list)
+                        command: filter_to_present(row[:filter]))
+        text << format_tags(row[:tags]) << "\n"
       end
-      cat_list = (CategoryList.new(guardian).categories.map { |category| category.slug }).join(', ')
-      text << I18n.t("slack.message.available_categories", list: cat_list)
+      text << available_categories
       text
     end
 
@@ -148,6 +154,10 @@ module DiscourseSlack
 
     def self.get_store(id = nil)
       PluginStore.get(DiscourseSlack::PLUGIN_NAME, get_key(id)) || []
+    end
+
+    def self.get_store_by_channel(channel, category_id = nil)
+      get_store(category_id).select{ |r| format_channel(r[:channel]) == channel }
     end
 
     def self.notify(id)

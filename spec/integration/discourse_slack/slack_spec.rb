@@ -168,6 +168,20 @@ describe 'Slack', type: :request do
             "filter" => "follow",
             "tags" => nil
           ])
+
+          post '/slack/command.json',
+            text: "status",
+            channel_name: "welcome",
+            token: token
+
+          json = JSON.parse(response.body)
+
+          text = I18n.t("slack.message.status.category",
+                   command: DiscourseSlack::Slack.filter_to_present("follow"),
+                   name: category.name) << "\n"
+          text << DiscourseSlack::Slack.available_categories
+
+          expect(json["text"]).to eq(text)
         end
 
         it 'should add the a new tag filter correctly' do
@@ -248,6 +262,20 @@ describe 'Slack', type: :request do
             "filter" => "mute",
             "tags" => [tag.name]
           ])
+
+          post '/slack/command.json',
+            text: "status",
+            channel_name: "welcome",
+            token: token
+
+          json = JSON.parse(response.body)
+
+          text = I18n.t("slack.message.status.all_categories",
+                   command: DiscourseSlack::Slack.filter_to_present("mute"))
+          text << I18n.t("slack.message.status.with_tags", tags: tag.name) << "\n"
+          text << DiscourseSlack::Slack.available_categories
+
+          expect(json["text"]).to eq(text)
         end
       end
 
@@ -260,6 +288,21 @@ describe 'Slack', type: :request do
           json = JSON.parse(response.body)
 
           expect(json["text"]).to eq(I18n.t("slack.help"))
+        end
+      end
+
+      describe 'status command' do
+        it 'should return the right response' do
+          post '/slack/command.json',
+            text: "status",
+            channel_name: "welcome",
+            token: token
+
+          expect(response).to be_success
+
+          json = JSON.parse(response.body)
+
+          expect(json["text"]).to eq(DiscourseSlack::Slack.available_categories)
         end
       end
     end

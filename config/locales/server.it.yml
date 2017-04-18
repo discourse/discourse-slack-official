@@ -22,9 +22,8 @@ it:
         category: "*%{command}* categoria *%{name}*"
         tag: "*%{command}* etichetta *%{name}*"
       status:
-        all_categories: "%{channel} è %{command} *tutte le categorie*\n"
-        category: "%{channel} è %{command} categoria *%{name}*\n"
-        tags: "%{channel} è %{command} etichette *%{list}*\n"
+        all_categories: "channel è %{command} *tutte le categorie*"
+        category: "channel è %{command} categoria *%{name}*"
       available_categories: "\nEcco le categorie disponibili: %{list}"
     help: |
       `/discourse [watch|follow|mute|help|status] [category|tag:name|all]`
