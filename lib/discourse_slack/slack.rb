@@ -120,6 +120,12 @@ module DiscourseSlack
     def self.set_filter_by_id(id, channel, filter, tags = nil, channel_id = nil)
       data = get_store(id)
       tags = Tag.where(name: tags).pluck(:name)
+
+      tags.each do |tag|
+        data.each_with_index do |_, index|
+          data[index]["tags"].delete tag
+        end
+      end
       tags = nil if tags.blank?
 
       index = data.index do |item|
