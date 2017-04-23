@@ -122,8 +122,15 @@ module DiscourseSlack
       tags = Tag.where(name: tags).pluck(:name)
       tags = nil if tags.blank?
 
-      index = data.index do |filter|
-        filter["channel"] == channel || filter["channel"] == channel_id
+      index = data.index do |item|
+        match_channel = item["channel"] == channel || item["channel"] == channel_id
+
+        if item["tags"]
+          item["tags"] = item["tags"] - tags
+          item["filter"] == filter && match_channel
+        else
+          match_channel
+        end
       end
 
       if index

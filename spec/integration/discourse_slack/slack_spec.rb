@@ -180,7 +180,7 @@ describe 'Slack', type: :request do
             command: DiscourseSlack::Slack.filter_to_present("follow"),
             name: category.name
           )
-          
+
           text << "\n"
           text << DiscourseSlack::Slack.available_categories
 
@@ -223,6 +223,31 @@ describe 'Slack', type: :request do
             "filter" => "follow",
             "tags" => [tag.name, tag_2.name]
           ])
+        end
+
+        it 'should update a tag filter correctly' do
+          SiteSetting.tagging_enabled = true
+          tag_2 = Fabricate(:tag)
+
+          post "/slack/command.json",
+            text: "follow tag:#{tag.name}",
+            channel_name: 'welcome',
+            token: token
+
+          post "/slack/command.json",
+            text: "follow tag:#{tag_2.name}",
+            channel_name: 'welcome',
+            token: token
+
+          post "/slack/command.json",
+            text: "watch tag:#{tag.name}",
+            channel_name: 'welcome',
+            token: token
+
+          expect(DiscourseSlack::Slack.get_store).to contain_exactly(
+            {"channel" => "#welcome", "filter" => "follow", "tags" => [tag_2.name]},
+            {"channel" => "#welcome", "filter" => "watch", "tags" => [tag.name]},
+          )
         end
       end
 
