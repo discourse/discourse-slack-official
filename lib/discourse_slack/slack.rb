@@ -120,19 +120,22 @@ module DiscourseSlack
     def self.set_filter_by_id(id, channel, filter, tags = nil, channel_id = nil)
       data = get_store(id)
       tags = Tag.where(name: tags).pluck(:name)
-
-      tags.each do |tag|
-        data.each_with_index do |_, index|
-          data[index]["tags"].delete tag
-        end
-      end
       tags = nil if tags.blank?
+      to_delete = []
 
       index = data.index do |item|
         match_channel = item["channel"] == channel || item["channel"] == channel_id
 
         if item["tags"]
-          item["tags"] = item["tags"] - tags
+          if tags
+            item["tags"] = item["tags"] - tags
+
+            if item["tags"].blank?
+              to_delete << item
+              next
+            end
+          end
+
           item["filter"] == filter && match_channel
         else
           match_channel
@@ -142,10 +145,12 @@ module DiscourseSlack
       if index
         data[index]['filter'] = filter
         data[index]['channel'] = channel
-        data[index]['tags'] = data[index]['tags'].concat(tags).uniq
+        data[index]['tags'] = data[index]['tags'].concat(tags).uniq if tags
       else
         data.push(channel: channel, filter: filter, tags: tags)
       end
+
+      data = data - to_delete
 
       PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(id), data)
     end
