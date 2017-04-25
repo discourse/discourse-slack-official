@@ -122,17 +122,23 @@ module DiscourseSlack
       tags = Tag.where(name: tags).pluck(:name)
 
       tags.each do |tag|
-        data.each_with_index do |_, index|
-          data[index]["tags"].delete tag
+        data.each_with_index do |item, index|
+          if data[index]["tags"].include? tag 
+            if  data[index]["tags"].size == 1
+              data.delete item
+            else
+              data[index]["tags"].delete tag
+            end
+          end
         end
       end
       tags = nil if tags.blank?
 
       index = data.index do |item|
         if tags
-          item["filter"] == filter && item["channel"] == channel || item["channel"] == channel_id
+          item["tags"] && item["filter"] == filter && (item["channel"] == channel || item["channel"] == channel_id)
         else
-         item["channel"] == channel || item["channel"] == channel_id
+          !item["tags"] && (item["channel"] == channel || item["channel"] == channel_id)
         end
       end
 
