@@ -1,39 +1,49 @@
 import FilterRule from 'discourse/plugins/discourse-slack-official/discourse/models/filter-rule';
 import { ajax } from 'discourse/lib/ajax';
 import { popupAjaxError } from 'discourse/lib/ajax-error';
+import computed from "ember-addons/ember-computed-decorators";
 
 export default Ember.Controller.extend({
-  categories: function() {
-    return [Discourse.Category.create({ name: 'All Categories', id: 0, slug: '*'})].concat(Discourse.Category.list());
-  }.property(),
-
   filters: [
-    { id: 'watch', name: I18n.t('slack.future.watch'), icon:'exclamation-circle' },
+    { id: 'watch', name: I18n.t('slack.future.watch'), icon: 'exclamation-circle' },
     { id: 'follow', name: I18n.t('slack.future.follow'), icon: 'circle'},
     { id: 'mute', name: I18n.t('slack.future.mute'), icon: 'times-circle' }
   ],
 
   editing: FilterRule.create({}),
 
+  @computed('editing.channel')
+  saveDisabled(channel) {
+    return Ember.isEmpty(channel);
+  },
+
   actions: {
-    edit(rule) {
-      this.set( 'editing', FilterRule.create(rule.getProperties('filter', 'category_id', 'channel')));
-    },
+    // TODO: Properly implement logic on the backend
+    // edit(rule) {
+    //   this.set(
+    //     'editing',
+    //     FilterRule.create(rule.getProperties('filter', 'category_id', 'channel', 'tags'))
+    //   );
+    // },
 
     save() {
       const rule = this.get('editing');
-      const model = this.get('model');
 
       ajax("/slack/list.json", {
-        method: 'POST',
-        data: rule.getProperties('filter', 'category_id', 'channel')
+        method: 'PUT',
+        data: rule.getProperties('filter', 'category_id', 'channel', 'tags')
       }).then(() => {
-        var obj = model.find((x) => ( x.get('category_id') === rule.get('category_id') && x.get('channel') === rule.get('channel') ));
+        const model = this.get('model');
+        const obj = model.find(x => (x.get('category_id') === rule.get('category_id') && x.get('channel') === rule.get('channel') && x.get('tags') === rule.get('tags')));
+
         if (obj) {
-          obj.set('channel', rule.channel);
-          obj.set('filter', rule.filter);
+          obj.setProperties({
+            channel: rule.channel,
+            filter: rule.filter,
+            tags: rule.tags
+          });
         } else {
-          model.pushObject(FilterRule.create(rule.getProperties('filter', 'category_id', 'channel')));
+          model.pushObject(FilterRule.create(rule.getProperties('filter', 'category_id', 'channel', 'tags')));
         }
       }).catch(popupAjaxError);
     },
@@ -41,10 +51,11 @@ export default Ember.Controller.extend({
     delete(rule) {
       const model = this.get('model');
 
-      ajax("/slack/list.json", { method: 'DELETE',
-        data: rule.getProperties('filter', 'category_id', 'channel')
+      ajax("/slack/list.json", {
+        method: 'DELETE',
+        data: rule.getProperties('filter', 'category_id', 'channel', 'tags')
       }).then(() => {
-        var obj = model.find((x) => ( x.get('category_id') === rule.get('category_id') && x.get('channel') === rule.get('channel') ));
+        const obj = model.find((x) => (x.get('category_id') === rule.get('category_id') && x.get('channel') === rule.get('channel') && x.get('tags') === rule.get('tags')));
         model.removeObject(obj);
       }).catch(popupAjaxError);
     },
@@ -52,7 +63,7 @@ export default Ember.Controller.extend({
     testNotification() {
       this.set('testingNotification', true);
 
-      ajax("/slack/test.json", { method: 'POST' })
+      ajax("/slack/test.json", { method: 'PUT' })
         .catch(popupAjaxError)
         .finally(() => {
           this.set('testingNotification', false);
@@ -60,7 +71,7 @@ export default Ember.Controller.extend({
     },
 
     resetSettings() {
-      ajax("/slack/reset_settings.json", { method: 'POST' });
+      ajax("/slack/reset_settings.json", { method: 'PUT' }).catch(popupAjaxError);
     }
   }
 });

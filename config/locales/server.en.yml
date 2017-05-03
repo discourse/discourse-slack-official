@@ -10,4 +10,34 @@ en:
     post_to_slack_window_secs: 'Wait (n) seconds before posting to slack, to give users a chance to edit and finalize their posts.'
     errors:
       invalid_webhook_url: "'slack outbound webhook url' is not a valid URL."
-      slack_outbound_webhook_url_is_empty: "You must set 'slack outbound webhook url' before enabling this setting."
+      slack_api_configs_are_empty: "You must set 'slack outbound webhook url' or 'slack access token' before enabling this setting."
+      slack_discourse_username_is_empty: "You must set 'slack discourse username' before enabling this setting."
+  slack:
+    message:
+      not_found:
+        tag: "I can't find the *%{name}* tag."
+        category: "I can't find the *%{name}* category. Did you mean: %{list}"
+      success:
+        all_categories: "*%{command} all categories* on this channel."
+        category: "*%{command}* category *%{name}*"
+        tag: "*%{command}* tag *%{name}*"
+      status:
+        all_categories: "This channel is %{command} *all categories*"
+        category: "This channel is %{command} category *%{name}*"
+        with_tags: " with tags *%{tags}*"
+      available_categories: "\nHere are your available categories: %{list}"
+    help: |
+      `/discourse [watch|follow|mute|help|status] [category|tag:name|all]`
+      *watch* – notify this channel for new topics and new replies
+      *follow* – notify this channel for new topics
+      *mute* – stop notifying this channel
+      *status* – show current notification state and categories
+    command:
+      past:
+        mute: 'muted'
+        follow: 'followed'
+        watch: 'watched'
+      present:
+        mute: 'muting'
+        follow: 'following'
+        watch: 'watching'

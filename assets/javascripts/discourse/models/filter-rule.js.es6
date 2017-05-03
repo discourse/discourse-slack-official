@@ -1,22 +1,23 @@
 import RestModel from 'discourse/models/rest';
+import Category from 'discourse/models/category';
+import computed from "ember-addons/ember-computed-decorators";
 
 export default RestModel.extend({
-  category_id: -1,
+  category_id: null,
   channel: '',
   filter: null,
 
-  category: function() {
-    var id = this.get('category_id');
-
-    if (id === "0")
-      return Discourse.Category.create({ name: 'All Categories', id: 0 });
+  @computed('category_id')
+  categoryName(categoryId) {
+    if (categoryId)
+      return Category.findById(categoryId).get('name');
     else {
-      return Discourse.Category.findById(id) || { id: id, name: 'Deleted Category' };
+      return I18n.t('slack.choose.all_categories');
     }
-  }.property('category_id'),
+  },
 
-  filter_name: function() {
-    return I18n.t('slack.present.' + this.get('filter') );
-  }.property('filter')
-
+  @computed('filter')
+  filterName(filter) {
+    return I18n.t(`slack.present.${filter}`);
+  }
 });

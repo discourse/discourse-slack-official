@@ -1,0 +1,34 @@
+it:
+  js:
+    slack:
+      title: 'Slack'
+      header:
+        rules: 'Regole filtri'
+      category: 'Categoria'
+      channel: 'Canale'
+      filter: 'Filtro'
+      tags: 'Etichette'
+      test_notification: 'Notifica di Prova'
+      reset_settings: 'Ripristina Tutte Le Impostazioni'
+      edit: 'Modifica'
+      delete: 'Cancella'
+      choose:
+        all_categories: 'Tutte le categorie'
+        deleted_category: 'Categoria eliminata'
+        filter: 'Scegli un filtro'
+        tags: 'Scegli le etichette'
+        channel: '#canale, @user o ID Canale'
+      error:
+        category: 'Per favore scegli una categoria.'
+        channel: 'Per favore inserisci un canale per inviare messaggi.'
+        filter: 'Per favore scegli un filtro.'
+      command:
+        help: "Per modificare queste impostazioni da slack, imposta uno slash command usando <a href='https://meta.discourse.org/t/configuring-slack-for-discourse-slack-plugin/52990'>queste istruzioni</a>."
+      present:
+        mute: 'Silenzia'
+        follow: 'Solo il primo messaggio'
+        watch: 'Tutti i messaggi e le risposte'
+      future:
+        mute: 'Disattiva le notifiche'
+        follow: 'Notifica del primo messaggio'
+        watch: 'Notifica di tutti i messaggi e le risposte'
