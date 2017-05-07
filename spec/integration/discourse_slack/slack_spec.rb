@@ -36,7 +36,7 @@ describe 'Slack', type: :request do
       end
 
       it 'should return the right response' do
-        DiscourseSlack::Slack.set_filter_by_id(category.id, '#some', 'follow', [tag.name])
+        DiscourseSlack::Slack.update_filter(category.id, '#some', 'follow', [tag.name])
 
         get '/slack/list.json'
 
@@ -99,7 +99,7 @@ describe 'Slack', type: :request do
       end
 
       it 'should be able to delete a filter' do
-        DiscourseSlack::Slack.set_filter_by_id(category.id, '#some', 'follow', [tag.name])
+        DiscourseSlack::Slack.update_filter(category.id, '#some', 'follow', [tag.name])
 
         delete '/slack/list.json',
           category_id: category.id,

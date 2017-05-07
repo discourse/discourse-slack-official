@@ -117,13 +117,29 @@ module DiscourseSlack
       "#{KEY_PREFIX}#{id.present? ? id : '*'}"
     end
 
-    def self.set_filter_by_id(id, channel, filter, tags = nil, channel_id = nil)
-      data = get_store(id)
+    def self.update_tag_filter(channel, filter, tag)
+      update_filter(nil, channel, filter, [tag])
+    end
+
+    def self.update_all_filter(channel, filter)
+      update_filter(nil, channel, filter, nil)
+    end
+
+    def self.update_category_filter(channel, filter, category_id)
+      update_filter(category_id, channel, filter, nil)
+    end
+
+    def self.create_filter(category_id, channel, filter, tags)
+      update_filter(category_id, channel, filter, tags)
+    end
+
+    def self.update_filter(category_id, channel, filter, tags = nil)
+      data = get_store(category_id)
       tags = Tag.where(name: tags).pluck(:name)
 
       tags.each do |tag|
         data.each_with_index do |item, index|
-          next unless item["channel"] == channel || item["channel"] == channel_id
+          next unless item["channel"] == channel
           if data[index]["tags"].include? tag 
             if  data[index]["tags"].size == 1
               data.delete item
@@ -137,9 +153,9 @@ module DiscourseSlack
 
       index = data.index do |item|
         if tags
-          item["tags"] && item["filter"] == filter && (item["channel"] == channel || item["channel"] == channel_id)
+          item["tags"] && item["filter"] == filter && item["channel"] == channel
         else
-          !item["tags"] && (item["channel"] == channel || item["channel"] == channel_id)
+          !item["tags"] && item["channel"] == channel
         end
       end
 
@@ -153,7 +169,7 @@ module DiscourseSlack
         else
           data.push(channel: channel, filter: filter, tags: tags)
         end
-        PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(id), data)
+        PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(category_id), data)
       end
 
       if filter == "unset"
@@ -161,14 +177,14 @@ module DiscourseSlack
           data.delete data[index]
         end
         if tags || index
-          PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(id), data)
+          PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(category_id), data)
         end
       end
 
     end
 
-    def self.delete_filter(id, channel, tags)
-      data = get_store(id)
+    def self.delete_filter(category_id, channel, tags)
+      data = get_store(category_id)
       tags = nil if tags.blank?
 
       data.delete_if do |i|
@@ -176,22 +192,22 @@ module DiscourseSlack
       end
 
       if data.empty?
-        PluginStore.remove(DiscourseSlack::PLUGIN_NAME, get_key(id))
+        PluginStore.remove(DiscourseSlack::PLUGIN_NAME, get_key(category_id))
       else
-        PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(id), data)
+        PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(category_id), data)
       end
     end
 
-    def self.get_store(id = nil)
-      PluginStore.get(DiscourseSlack::PLUGIN_NAME, get_key(id)) || []
+    def self.get_store(category_id = nil)
+      PluginStore.get(DiscourseSlack::PLUGIN_NAME, get_key(category_id)) || []
     end
 
     def self.get_store_by_channel(channel, category_id = nil)
       get_store(category_id).select{ |r| format_channel(r[:channel]) == channel }
     end
 
-    def self.notify(id)
-      post = Post.find_by(id: id)
+    def self.notify(post_id)
+      post = Post.find_by(id: post_id)
       return if post.blank? || post.post_type != Post.types[:regular] || !guardian.can_see?(post)
 
       topic = post.topic
