@@ -32,11 +32,13 @@ en:
       *follow* – notify this channel for new topics
       *mute* – stop notifying this channel
       *status* – show current notification state and categories
+      *unset* – unset a notification state for a tag or category
     command:
       past:
         mute: 'muted'
         follow: 'followed'
         watch: 'watched'
+        unset: 'unset'
       present:
         mute: 'muting'
         follow: 'following'

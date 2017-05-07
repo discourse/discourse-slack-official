@@ -123,6 +123,7 @@ module DiscourseSlack
 
       tags.each do |tag|
         data.each_with_index do |item, index|
+          next unless item["channel"] == channel || item["channel"] == channel_id
           if data[index]["tags"].include? tag 
             if  data[index]["tags"].size == 1
               data.delete item
@@ -142,15 +143,28 @@ module DiscourseSlack
         end
       end
 
-      if index
-        data[index]['filter'] = filter
-        data[index]['channel'] = channel
-        data[index]['tags'] = data[index]['tags'].concat(tags).uniq
-      else
-        data.push(channel: channel, filter: filter, tags: tags)
+      if filter != "unset"
+        if index
+            data[index]['filter'] = filter
+            data[index]['channel'] = channel
+            if tags
+              data[index]['tags'] = data[index]['tags'].concat(tags).uniq
+            end
+        else
+          data.push(channel: channel, filter: filter, tags: tags)
+        end
+        PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(id), data)
       end
 
-      PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(id), data)
+      if filter == "unset"
+        if index && !tags
+          data.delete data[index]
+        end
+        if tags || index
+          PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(id), data)
+        end
+      end
+
     end
 
     def self.delete_filter(id, channel, tags)

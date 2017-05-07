@@ -116,7 +116,7 @@ after_initialize do
 
       text =
         case cmd
-        when "watch", "follow", "mute"
+        when "watch", "follow", "mute", "unset"
           if (tokens.size == 2)
             value = tokens[1]
             filter_to_past = DiscourseSlack::Slack.filter_to_past(cmd).capitalize

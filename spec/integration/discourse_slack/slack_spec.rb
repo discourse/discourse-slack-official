@@ -287,6 +287,168 @@ describe 'Slack', type: :request do
           )
         end
 
+        it 'should update a category filter correctly' do
+          post "/slack/command.json",
+            text: "follow #{category.slug}",
+            channel_name: 'welcome',
+            token: token
+
+          json = JSON.parse(response.body)
+
+          expect(json["text"]).to eq(I18n.t(
+            "slack.message.success.category", command: "Followed", name: category.name
+          ))
+
+          expect(DiscourseSlack::Slack.get_store(category.id)).to eq([
+            "channel" => "#welcome",
+            "filter" => "follow",
+            "tags" => nil
+          ])
+
+          post "/slack/command.json",
+            text: "watch #{category.slug}",
+            channel_name: 'welcome',
+            token: token
+
+          json = JSON.parse(response.body)
+
+          expect(json["text"]).to eq(I18n.t(
+            "slack.message.success.category", command: "Watched", name: category.name
+          ))
+
+          expect(DiscourseSlack::Slack.get_store(category.id)).to eq([
+            "channel" => "#welcome",
+            "filter" => "watch",
+            "tags" => nil
+          ])
+        end
+      end
+
+      describe 'unset category subscription' do
+        it 'should unset the subscription and return the right response' do
+          post "/slack/command.json",
+            text: "follow #{category.slug}",
+            channel_name: 'welcome',
+            token: token
+
+          post "/slack/command.json",
+            text: "unset #{category.slug}",
+            channel_name: 'welcome',
+            token: token
+
+          expect(response).to be_success
+
+          json = JSON.parse(response.body)
+
+          expect(json["text"]).to eq(I18n.t(
+            "slack.message.success.category", command: "Unset", name: category.name
+          ))
+
+          expect(DiscourseSlack::Slack.get_store(category.id)).to be_empty
+        end
+
+        it 'should not unset the category filter for another channel' do
+          post "/slack/command.json",
+            text: "follow #{category.slug}",
+            channel_name: 'welcome',
+            token: token
+
+          post "/slack/command.json",
+            text: "follow #{category.slug}",
+            channel_name: 'general',
+            token: token
+
+          post "/slack/command.json",
+            text: "unset #{category.slug}",
+            channel_name: 'welcome',
+            token: token
+
+          expect(DiscourseSlack::Slack.get_store(category.id)).to eq([
+            {"channel" => "#general", "filter" => "follow", "tags" => nil},
+          ])
+        end
+      end
+
+      describe 'unset tag subscription' do
+        before do
+          SiteSetting.tagging_enabled = true
+        end
+
+        it 'should unset the tag subscription and return the right response' do
+          post "/slack/command.json",
+            text: "follow tag:#{tag.name}",
+            channel_name: 'welcome',
+            token: token
+          post "/slack/command.json",
+            text: "unset tag:#{tag.name}",
+            channel_name: 'welcome',
+            token: token
+
+          expect(response).to be_success
+          json = JSON.parse(response.body)
+          expect(json["text"]).to eq(I18n.t(
+            "slack.message.success.tag", command: "Unset", name: tag.name
+          ))
+          expect(DiscourseSlack::Slack.get_store).to be_empty
+        end
+
+        it 'should not unset other tag subscriptions for the channel' do
+          tag_2 = Fabricate(:tag)
+          post "/slack/command.json",
+            text: "follow tag:#{tag.name}",
+            channel_name: 'welcome',
+            token: token
+          post "/slack/command.json",
+            text: "follow tag:#{tag_2.name}",
+            channel_name: 'welcome',
+            token: token
+          post "/slack/command.json",
+            text: "unset tag:#{tag.name}",
+            channel_name: 'welcome',
+            token: token
+
+          expect(DiscourseSlack::Slack.get_store).to contain_exactly(
+            {"channel" => "#welcome", "filter" => "follow", "tags" => [tag_2.name]},
+          )
+        end
+
+        it 'should not unset the tag subscription for another channel' do
+          post "/slack/command.json",
+            text: "follow tag:#{tag.name}",
+            channel_name: 'welcome',
+            token: token
+          post "/slack/command.json",
+            text: "follow tag:#{tag.name}",
+            channel_name: 'general',
+            token: token
+          post "/slack/command.json",
+            text: "unset tag:#{tag.name}",
+            channel_name: 'welcome',
+            token: token
+
+          expect(DiscourseSlack::Slack.get_store).to contain_exactly(
+            {"channel" => "#general", "filter" => "follow", "tags" => [tag.name]},
+          )
+        end
+
+        it 'should not unset the "all" category subscription for the channel' do
+          post "/slack/command.json",
+            text: "follow tag:#{tag.name}",
+            channel_name: 'welcome',
+            token: token
+          post "/slack/command.json",
+            text: "follow all",
+            channel_name: 'welcome',
+            token: token
+          post "/slack/command.json",
+            text: "unset tag:#{tag.name}",
+            channel_name: 'welcome',
+            token: token
+
+          expect(DiscourseSlack::Slack.get_store).to contain_exactly(
+            {"channel" => "#welcome", "filter" => "follow", "tags" => nil},
+          )
+        end
       end
 
       describe 'mute command' do
