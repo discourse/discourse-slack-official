@@ -36,7 +36,7 @@ describe 'Slack', type: :request do
       end
 
       it 'should return the right response' do
-        DiscourseSlack::Slack.update_filter(category.id, '#some', 'follow', [tag.name])
+        DiscourseSlack::Slack.create_filter(category.id, '#some', 'follow', [tag.name])
 
         get '/slack/list.json'
 
@@ -99,7 +99,7 @@ describe 'Slack', type: :request do
       end
 
       it 'should be able to delete a filter' do
-        DiscourseSlack::Slack.update_filter(category.id, '#some', 'follow', [tag.name])
+        DiscourseSlack::Slack.create_filter(category.id, '#some', 'follow', [tag.name])
 
         delete '/slack/list.json',
           category_id: category.id,
@@ -261,6 +261,24 @@ describe 'Slack', type: :request do
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
             {"channel" => "#welcome", "filter" => "watch", "tags" => [tag.name, tag_2.name]},
           )
+        end
+
+        it 'returns a not found message when a tag does not exist' do
+          SiteSetting.tagging_enabled = true
+          post "/slack/command.json",
+            text: "follow tag:non-existent",
+            channel_name: 'welcome',
+            token: token
+
+          expect(response).to be_success
+
+          json = JSON.parse(response.body)
+
+          expect(json["text"]).to eq(I18n.t(
+            "slack.message.not_found.tag", name: "non-existent"
+          ))
+
+          expect(DiscourseSlack::Slack.get_store(category.id)).to be_empty
         end
 
         it 'should add a category filter and tag filter correctly' do
