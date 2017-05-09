@@ -19,6 +19,11 @@ RSpec.describe DiscourseSlack::SlackMessageFormatter do
             .to eq("test <https://localhost:3000/some/path|>")
         end
       end
+
+      it "should not raise an error with unparseable urls" do
+        expect(described_class.format("<a>test</a>")).to eq("<test.localhost|test>")
+      end
+
     end
   end
 end
