@@ -38,7 +38,9 @@ module DiscourseSlack
     private
 
       def absolute_url(url)
-        uri = URI(url) rescue url
+        uri = URI(url) rescue nil
+
+        return Discourse.current_hostname unless uri
         uri.host = Discourse.current_hostname if !uri.host
         uri.scheme = (SiteSetting.force_https ? 'https' : 'http') if !uri.scheme
         uri.to_s
