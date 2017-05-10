@@ -120,10 +120,26 @@ module DiscourseSlack
     def self.set_filter_by_id(id, channel, filter, tags = nil, channel_id = nil)
       data = get_store(id)
       tags = Tag.where(name: tags).pluck(:name)
+
+      tags.each do |tag|
+        data.each_with_index do |item, index|
+          if data[index]["tags"].include? tag 
+            if  data[index]["tags"].size == 1
+              data.delete item
+            else
+              data[index]["tags"].delete tag
+            end
+          end
+        end
+      end
       tags = nil if tags.blank?
 
-      index = data.index do |filter|
-        filter["channel"] == channel || filter["channel"] == channel_id
+      index = data.index do |item|
+        if tags
+          item["tags"] && item["filter"] == filter && (item["channel"] == channel || item["channel"] == channel_id)
+        else
+          !item["tags"] && (item["channel"] == channel || item["channel"] == channel_id)
+        end
       end
 
       if index
