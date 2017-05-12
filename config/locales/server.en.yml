@@ -27,17 +27,20 @@ en:
         with_tags: " with tags *%{tags}*"
       available_categories: "\nHere are your available categories: %{list}"
     help: |
-      `/discourse [watch|follow|mute|help|status] [category|tag:name|all]`
+      `/optianswers [watch|follow|mute|search|help|status] [category|tag:name|all]`
       *watch* – notify this channel for new topics and new replies
       *follow* – notify this channel for new topics
       *mute* – stop notifying this channel
       *status* – show current notification state and categories
+      *search* - search optianswers with a query
     command:
       past:
         mute: 'muted'
         follow: 'followed'
         watch: 'watched'
+        search: 'searched'
       present:
         mute: 'muting'
         follow: 'following'
         watch: 'watching'
+        search: 'searching'

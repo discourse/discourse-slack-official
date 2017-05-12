@@ -118,7 +118,7 @@ after_initialize do
           "##{params[:channel_name]}"
         end
 
-      cmd = tokens[0] if tokens.size > 0 && tokens.size < 3
+      cmd = tokens[0] if tokens.size > 0
 
       text =
         case cmd
@@ -153,8 +153,8 @@ after_initialize do
             DiscourseSlack::Slack.help
           end
         when "search"
-          if (tokens.size == 1)
-            query = tokens[0]
+          if (tokens.size >= 2)
+            query = tokens[1..tokens.size-1].join(" ")
             DiscourseSlack::Slack.search(query)
           else
             DiscourseSlack::Slack.help

@@ -1,3 +1,9 @@
+require_dependency 'discourse'
+require_dependency 'search'
+require_dependency 'search/grouped_search_results'
+require 'time'
+require 'cgi'
+
 module DiscourseSlack
   class Slack
     KEY_PREFIX = 'category_'.freeze
