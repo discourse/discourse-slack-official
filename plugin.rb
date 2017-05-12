@@ -96,6 +96,12 @@ after_initialize do
       render json: success_json
     end
 
+    def search
+      params.permit(:query)
+      DiscourseSlack::Slack.search(params[:query])
+      render json: success_json
+    end
+
     def command
       guardian = DiscourseSlack::Slack.guardian
 
@@ -143,6 +149,13 @@ after_initialize do
                 I18n.t("slack.message.not_found.category", name: tokens[1], list: cat_list)
               end
             end
+          else
+            DiscourseSlack::Slack.help
+          end
+        when "search"
+          if (tokens.size == 1)
+            query = tokens[0]
+            DiscourseSlack::Slack.search(query)
           else
             DiscourseSlack::Slack.help
           end

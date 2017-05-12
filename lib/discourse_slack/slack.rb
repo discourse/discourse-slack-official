@@ -137,6 +137,33 @@ module DiscourseSlack
       PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(id), data)
     end
 
+    def self.search(query)
+      search = Search.new(query)
+      result = search.execute
+      query_encoded = CGI::escape(query)
+      search_link = "#{DOMAIN}/search?q=#{query_encoded}"
+      initial_text = "Top 5 results for `#{query}` #{search_link}"
+      if (!result.posts.any?)
+        initial_text = "No results for `#{query}` #{search_link}"
+      end
+      attachments = []
+      result.posts.each_with_index { |post, index|
+        text = result.blurb(post)
+        text = text.gsub(query.downcase, "*#{query}*")
+        text = text.gsub(query.titleize, "*#{query}*")
+        text = text.gsub(query.upcase, "*#{query}*")
+        attachments[index] = slack_process_attachment(post, text)
+      }
+      if (attachments.length > 5)
+        remaining = attachments.length - 5
+        more_text = "See #{remaining} more results for `#{query}` #{search_link}"
+        more_message = { fallback: more_text, text: more_text }
+        attachments = attachments[0..5]
+        attachments[6] = more_message
+      end
+      return { username: username, icon_emoji: icon_emoji, text: initial_text, mrkdwn: true, attachments: attachments }
+    end
+
     def self.delete_filter(id, channel, tags)
       data = get_store(id)
       tags = nil if tags.blank?
