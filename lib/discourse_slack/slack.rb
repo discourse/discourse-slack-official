@@ -137,6 +137,43 @@ module DiscourseSlack
       PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(id), data)
     end
 
+
+    def self.slack_process_attachment(post, text)
+      topic = Topic.find_by(id: post.topic_id)
+      user = User.find_by(id: post.user_id)
+      category = Category.find_by(id: topic.category_id)
+      category_link = "#{DOMAIN}/c/#{category.slug}"
+
+      color = category.color
+      mrkdwn_in = ["text"]
+
+      title = topic.title
+      title_link = post.full_url
+
+      author_link = "#{DOMAIN}/users/#{user.username}"
+      author_name = "#{user.name}"
+      if (user.name.blank?)
+        author_name = "@#{user.username}"
+      end
+
+      reading_time = 1+(topic.word_count/300).round
+      reply_emoji = "mailbox_with_mail"
+      if (topic.posts_count == 1)
+        reply_emoji = "mailbox_closed"
+      end
+
+      clock_emoji = "clock#{reading_time}"
+      if (reading_time > 11)
+        clock_emoji = "alarm_clock"
+      end
+      footer = "<#{category_link}|#{category.name}> :bookmark:   |   #{reading_time} mins :#{clock_emoji}:   |   #{post.like_count} :+1:   |   #{topic.posts_count-1} :#{reply_emoji}:   |   #{post.updated_at} :spiral_calendar_pad:"
+
+      fallback = "<#{title_link}|#{text}>"
+
+      return { fallback: fallback, color: color, author_name: author_name, author_link: author_link, title: title, title_link: title_link, text: text, footer: footer, mrkdwn_in: mrkdwn_in}
+    end
+
+
     def self.search(query)
       search = Search.new(query)
       result = search.execute
