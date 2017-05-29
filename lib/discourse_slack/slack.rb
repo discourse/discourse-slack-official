@@ -1,3 +1,9 @@
+require_dependency 'discourse'
+require_dependency 'search'
+require_dependency 'search/grouped_search_results'
+require 'time'
+require 'cgi'
+
 module DiscourseSlack
   class Slack
     KEY_PREFIX = 'category_'.freeze
@@ -153,6 +159,70 @@ module DiscourseSlack
       data = data - to_delete
 
       PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(id), data)
+    end
+
+
+    def self.slack_process_attachment(post, text)
+      topic = Topic.find_by(id: post.topic_id)
+      user = User.find_by(id: post.user_id)
+      category = Category.find_by(id: topic.category_id)
+      category_link = "#{DOMAIN}/c/#{category.slug}"
+
+      color = category.color
+      mrkdwn_in = ["text"]
+
+      title = topic.title
+      title_link = post.full_url
+
+      author_link = "#{DOMAIN}/users/#{user.username}"
+      author_name = "#{user.name}"
+      if (user.name.blank?)
+        author_name = "@#{user.username}"
+      end
+
+      reading_time = 1+(topic.word_count/300).round
+      reply_emoji = "mailbox_with_mail"
+      if (topic.posts_count == 1)
+        reply_emoji = "mailbox_closed"
+      end
+
+      clock_emoji = "clock#{reading_time}"
+      if (reading_time > 11)
+        clock_emoji = "alarm_clock"
+      end
+      footer = "<#{category_link}|#{category.name}> :bookmark:   |   #{reading_time} mins :#{clock_emoji}:   |   #{post.like_count} :+1:   |   #{topic.posts_count-1} :#{reply_emoji}:   |   #{post.updated_at} :spiral_calendar_pad:"
+
+      fallback = "<#{title_link}|#{text}>"
+
+      return { fallback: fallback, color: color, author_name: author_name, author_link: author_link, title: title, title_link: title_link, text: text, footer: footer, mrkdwn_in: mrkdwn_in}
+    end
+
+
+    def self.search(query)
+      search = Search.new(query)
+      result = search.execute
+      query_encoded = CGI::escape(query)
+      search_link = "#{DOMAIN}/search?q=#{query_encoded}"
+      initial_text = "Top 5 results for `#{query}` #{search_link}"
+      if (!result.posts.any?)
+        initial_text = "No results for `#{query}` #{search_link}"
+      end
+      attachments = []
+      result.posts.each_with_index { |post, index|
+        text = result.blurb(post)
+        text = text.gsub(query.downcase, "*#{query}*")
+        text = text.gsub(query.titleize, "*#{query}*")
+        text = text.gsub(query.upcase, "*#{query}*")
+        attachments[index] = slack_process_attachment(post, text)
+      }
+      if (attachments.length > 5)
+        remaining = attachments.length - 5
+        more_text = "See #{remaining} more results for `#{query}` #{search_link}"
+        more_message = { fallback: more_text, text: more_text }
+        attachments = attachments[0..5]
+        attachments[6] = more_message
+      end
+      return { username: username, icon_emoji: icon_emoji, text: initial_text, mrkdwn: true, attachments: attachments }
     end
 
     def self.delete_filter(id, channel, tags)
