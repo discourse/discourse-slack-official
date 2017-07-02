@@ -119,19 +119,15 @@ module DiscourseSlack
 
     def self.update_tag_filter(channel, filter, tag)
       data = get_store(nil)
-      data.each_with_index do |item, index|
-        next unless item["channel"] == channel
-        if data[index]["tags"].include? tag
-          if  data[index]["tags"].size == 1
-            data.delete item
-          else
-            data[index]["tags"].delete tag
-          end
-        end
-      end
+      to_delete = []
 
       index = data.index do |item|
-        item["tags"] && item["filter"] == filter && item["channel"] == channel
+        next unless item["channel"] == channel
+        if item["tags"]
+          item["tags"] = item["tags"] - [tag]
+          to_delete << item if item["tags"].empty?
+        end
+        item["tags"] && item["filter"] == filter
       end
 
       if filter != "unset"
@@ -139,6 +135,7 @@ module DiscourseSlack
         data.push(channel: channel, filter: filter, tags: [tag]) if !index
       end
 
+      data = data - to_delete
       PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(nil), data)
     end
 
