@@ -82,10 +82,10 @@ after_initialize do
       render json: success_json
     end
 
-    def edit
+    def create
       params.permit(:tags, :category_id, :filter, :channel)
 
-      DiscourseSlack::Slack.set_filter_by_id(params[:category_id], params[:channel], params[:filter], params[:tags])
+      DiscourseSlack::Slack.create_filter(params[:category_id], params[:channel], params[:filter], params[:tags])
       render json: success_json
     end
 
@@ -116,7 +116,7 @@ after_initialize do
 
       text =
         case cmd
-        when "watch", "follow", "mute"
+        when "watch", "follow", "mute", "unset"
           if (tokens.size == 2)
             value = tokens[1]
             filter_to_past = DiscourseSlack::Slack.filter_to_past(cmd).capitalize
@@ -128,15 +128,15 @@ after_initialize do
               if !tag
                 I18n.t("slack.message.not_found.tag", name: value)
               else
-                DiscourseSlack::Slack.set_filter_by_id(nil, channel, cmd, [tag.name], params[:channel_id])
+                DiscourseSlack::Slack.update_tag_filter(channel, cmd, tag.name)
                 I18n.t("slack.message.success.tag", command: filter_to_past, name: tag.name)
               end
             else
               if (value.casecmp("all") == 0)
-                DiscourseSlack::Slack.set_filter_by_id(nil, channel, cmd, nil, params[:channel_id])
+                DiscourseSlack::Slack.update_all_filter(channel, cmd)
                 I18n.t("slack.message.success.all_categories", command: filter_to_past)
               elsif (category = Category.find_by(slug: value)) && guardian.can_see_category?(category)
-                DiscourseSlack::Slack.set_filter_by_id(category.id, channel, cmd, nil, params[:channel_id])
+                DiscourseSlack::Slack.update_category_filter(channel, cmd, category.id)
                 I18n.t("slack.message.success.category", command: filter_to_past, name: category.name)
               else
                 cat_list = (CategoryList.new(guardian).categories.map(&:slug)).join(', ')
@@ -203,7 +203,7 @@ after_initialize do
     get "/list" => "slack#list", constraints: AdminConstraint.new
     put "/test" => "slack#test_notification", constraints: AdminConstraint.new
     put "/reset_settings" => "slack#reset_settings", constraints: AdminConstraint.new
-    put "/list" => "slack#edit", constraints: AdminConstraint.new
+    put "/list" => "slack#create", constraints: AdminConstraint.new
     delete "/list" => "slack#delete", constraints: AdminConstraint.new
   end
 
