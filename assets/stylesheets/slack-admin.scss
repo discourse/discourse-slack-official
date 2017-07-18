@@ -1,9 +1,4 @@
 .admin-slack {
-  .new-filter input.channel {
-    width: 190px;
-    margin-bottom: 0px;
-  }
-
   h1 {
     margin-bottom: 15px;
   }
@@ -18,5 +13,13 @@
 
   .admin-controls input[type="text"] {
     float: none;
+  }
+
+  .form-horizontal label {
+    font-weight: bold;
+  }
+
+  .form-horizontal > div {
+    margin-top: 10px;
   }
 }

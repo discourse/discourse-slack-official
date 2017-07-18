@@ -10,7 +10,8 @@ export default Ember.Controller.extend({
     { id: 'mute', name: I18n.t('slack.future.mute'), icon: 'times-circle' }
   ],
 
-  editing: FilterRule.create({}),
+
+  editing: false,
 
   @computed('editing.channel')
   saveDisabled(channel) {
@@ -25,6 +26,14 @@ export default Ember.Controller.extend({
     //     FilterRule.create(rule.getProperties('filter', 'category_id', 'channel', 'tags'))
     //   );
     // },
+
+    new() {
+      this.set('editing', FilterRule.create({}));
+    },
+
+    cancel() {
+      this.set('editing', false);
+    },
 
     save() {
       const rule = this.get('editing');
@@ -45,6 +54,7 @@ export default Ember.Controller.extend({
         } else {
           model.pushObject(FilterRule.create(rule.getProperties('filter', 'category_id', 'channel', 'tags')));
         }
+        this.set('editing', false);
       }).catch(popupAjaxError);
     },
 

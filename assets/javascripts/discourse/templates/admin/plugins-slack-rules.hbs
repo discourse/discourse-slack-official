@@ -1,4 +1,52 @@
 <div id="slack-rules">
+  {{#if editing}}
+    <form class="form-horizontal new-filter">
+      <div>
+        <label>{{i18n "slack.category"}}</label>
+        {{category-chooser
+          value=editing.categoryId
+          rootNoneLabel="slack.choose.all_categories"
+          rootNone=true}}
+      </div>
+
+      {{#if siteSettings.tagging_enabled}}
+        <div>
+          <label>{{i18n "slack.tags"}}</label>
+          {{tag-chooser tags=editing.tags placeholderKey="slack.choose.tags" width=220}}
+        </div>
+      {{/if}}
+
+      <div>
+        <label>{{i18n "slack.channel"}}</label>
+        {{text-field value=editing.channel placeholderKey="slack.choose.channel" class="channel"}}
+      </div>
+
+      <div>
+        <label>{{i18n "slack.filter"}}</label>
+        {{combo-box content=filters value=editing.filter}}
+      </div>
+
+      <div class="buttons">
+        {{d-button
+          action="save"
+          class="save btn btn-primary"
+          title="slack.button.save"
+          label="slack.button.save"
+          disabled=saveDisabled}}
+
+        {{d-button
+          action="cancel"
+          class="btn btn-default"
+          title="slack.button.cancel"
+          label="slack.button.cancel"}}
+      </div>
+    </form>
+  {{else}}
+    {{d-button action="new"
+      icon="plus"
+      title="slack.button.new"
+      label="slack.button.new"}}
+  {{/if}}
   <table>
     <tr>
       <th>{{i18n "slack.category"}}</th>
@@ -29,31 +77,6 @@
         </td>
       </tr>
     {{/each}}
-
-    <tr class="new-filter">
-      <td>
-        {{category-chooser
-            value=editing.categoryId
-            rootNoneLabel="slack.choose.all_categories"
-            rootNone=true}}
-      </td>
-
-      {{#if siteSettings.tagging_enabled}}
-        <td>{{tag-chooser tags=editing.tags placeholderKey="slack.choose.tags"}}</td>
-      {{/if}}
-
-      <td>{{text-field value=editing.channel placeholderKey="slack.choose.channel" class="channel"}}</td>
-      <td>{{combo-box content=filters value=editing.filter}}</td>
-
-      <td>
-        {{d-button
-            action="save"
-            icon="save"
-            class="save btn-primary"
-            title="save"
-            disabled=saveDisabled}}
-      </td>
-    </tr>
   </table>
 
   <p>{{{i18n "slack.command.help"}}}</p>

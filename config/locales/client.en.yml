@@ -39,4 +39,7 @@ en:
         count: "Count"
       button:
         fetch: "Fetch Messages"
+        new: "New"
+        save: "Save"
+        cancel: "Cancel"
       generate_topic_desc: "Create new topic with your slack channel's chat transcript data."
