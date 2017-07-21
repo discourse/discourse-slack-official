@@ -14,8 +14,7 @@ module DiscourseSlack
     end
 
     def start_element(name, attributes = [])
-      case name
-      when "a"
+      if name == "a"
         attributes = Hash[*attributes.flatten]
         @in_a = true
         @excerpt << "<#{absolute_url(attributes['href'])}|"
@@ -23,8 +22,7 @@ module DiscourseSlack
     end
 
     def end_element(name)
-      case name
-      when "a"
+      if name == "a"
         @excerpt << ">"
         @in_a = false
       end
@@ -41,6 +39,8 @@ module DiscourseSlack
         uri = URI(url) rescue nil
 
         return Discourse.current_hostname unless uri
+        return uri.to_s unless [nil, "http", "https"].include? uri.scheme
+
         uri.host = Discourse.current_hostname if !uri.host
         uri.scheme = (SiteSetting.force_https ? 'https' : 'http') if !uri.scheme
         uri.to_s
