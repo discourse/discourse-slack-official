@@ -20,7 +20,7 @@ module DiscourseSlack
     end
 
     def self.format_channel(name)
-      (name.include?("@") || name.include?("\#"))? name : "<##{name}>"
+      (name.include?("@") || name.include?("\#")) ? name : "<##{name}>"
     end
 
     def self.format_tags(names)
@@ -35,7 +35,7 @@ module DiscourseSlack
     end
 
     def self.status(channel)
-      rows = PluginStoreRow.where(plugin_name: DiscourseSlack::PLUGIN_NAME).where("key ~* :pat", :pat => '^category_.*')
+      rows = PluginStoreRow.where(plugin_name: DiscourseSlack::PLUGIN_NAME).where("key ~* :pat", pat: '^category_.*')
       text = ""
 
       categories = rows.map { |item| item.key.gsub('category_', '') }
@@ -76,7 +76,7 @@ module DiscourseSlack
 
       topic = post.topic
 
-      category = (topic.category.parent_category) ? "[#{topic.category.parent_category.name}/#{topic.category.name}]": "[#{topic.category.name}]"
+      category = (topic.category.parent_category) ? "[#{topic.category.parent_category.name}/#{topic.category.name}]" : "[#{topic.category.name}]"
 
       icon_url =
         if !SiteSetting.slack_icon_url.blank?
@@ -103,8 +103,8 @@ module DiscourseSlack
 
       record = ::PluginStore.get(DiscourseSlack::PLUGIN_NAME, "topic_#{post.topic.id}_#{channel}")
 
-      if (SiteSetting.slack_access_token.empty? || post.is_first_post? || record.blank? || (record.present? &&  ((Time.now.to_i - record[:ts].split('.')[0].to_i)/ 60) >= 5 ))
-        summary[:title] = "#{topic.title} #{(category == '[uncategorized]')? '' : category} #{topic.tags.present? ? topic.tags.map(&:name).join(', ') : ''}"
+      if (SiteSetting.slack_access_token.empty? || post.is_first_post? || record.blank? || (record.present? && ((Time.now.to_i - record[:ts].split('.')[0].to_i) / 60) >= 5))
+        summary[:title] = "#{topic.title} #{(category == '[uncategorized]') ? '' : category} #{topic.tags.present? ? topic.tags.map(&:name).join(', ') : ''}"
         summary[:title_link] = post.full_url
         summary[:thumb_url] = post.full_url
       end
@@ -190,7 +190,7 @@ module DiscourseSlack
     end
 
     def self.get_store_by_channel(channel, category_id = nil)
-      get_store(category_id).select{ |r| format_channel(r[:channel]) == channel }
+      get_store(category_id).select { |r| format_channel(r[:channel]) == channel }
     end
 
     def self.notify(post_id)
@@ -215,7 +215,7 @@ module DiscourseSlack
         topic_tags = (SiteSetting.tagging_enabled? && topic.tags.present?) ? topic.tags.pluck(:name) : []
 
         next if SiteSetting.tagging_enabled? && i[:tags].present? && (topic_tags & i[:tags]).count == 0
-        next if ( i[:filter] == 'mute') || ( !(post.is_first_post?) && i[:filter] == 'follow' )
+        next if (i[:filter] == 'mute') || (!(post.is_first_post?) && i[:filter] == 'follow')
 
         message = slack_message(post, i[:channel])
 
@@ -224,7 +224,7 @@ module DiscourseSlack
           uri = ""
           record = ::PluginStore.get(DiscourseSlack::PLUGIN_NAME, "topic_#{post.topic.id}_#{i[:channel]}")
 
-          if (record.present? && ((Time.now.to_i - record[:ts].split('.')[0].to_i)/ 60) < 5 && record[:message][:attachments].length < 5)
+          if (record.present? && ((Time.now.to_i - record[:ts].split('.')[0].to_i) / 60) < 5 && record[:message][:attachments].length < 5)
             attachments = record[:message][:attachments]
             attachments.concat message[:attachments]
 
@@ -248,9 +248,9 @@ module DiscourseSlack
 
           response = http.request(Net::HTTP::Post.new(uri))
 
-          ::PluginStore.set(DiscourseSlack::PLUGIN_NAME, "topic_#{post.topic.id}_#{i[:channel]}", JSON.parse(response.body) )
+          ::PluginStore.set(DiscourseSlack::PLUGIN_NAME, "topic_#{post.topic.id}_#{i[:channel]}", JSON.parse(response.body))
         elsif !(SiteSetting.slack_outbound_webhook_url.empty?)
-          req = Net::HTTP::Post.new(URI(SiteSetting.slack_outbound_webhook_url), 'Content-Type' =>'application/json')
+          req = Net::HTTP::Post.new(URI(SiteSetting.slack_outbound_webhook_url), 'Content-Type' => 'application/json')
           req.body = message.to_json
           response = http.request(req)
         end

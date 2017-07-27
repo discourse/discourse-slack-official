@@ -240,7 +240,7 @@ describe 'Slack', type: :request do
             token: token
 
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
-            {"channel" => "#welcome", "filter" => "follow", "tags" => [tag.name, tag_2.name]},
+            "channel" => "#welcome", "filter" => "follow", "tags" => [tag.name, tag_2.name],
           )
 
           post "/slack/command.json",
@@ -249,8 +249,8 @@ describe 'Slack', type: :request do
             token: token
 
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
-            {"channel" => "#welcome", "filter" => "follow", "tags" => [tag_2.name]},
-            {"channel" => "#welcome", "filter" => "watch", "tags" => [tag.name]},
+            { "channel" => "#welcome", "filter" => "follow", "tags" => [tag_2.name] },
+            "channel" => "#welcome", "filter" => "watch", "tags" => [tag.name],
           )
 
           post "/slack/command.json",
@@ -259,7 +259,7 @@ describe 'Slack', type: :request do
             token: token
 
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
-            {"channel" => "#welcome", "filter" => "watch", "tags" => [tag.name, tag_2.name]},
+            "channel" => "#welcome", "filter" => "watch", "tags" => [tag.name, tag_2.name],
           )
         end
 
@@ -291,7 +291,7 @@ describe 'Slack', type: :request do
             token: token
 
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
-            {"channel" => "#welcome", "filter" => "watch", "tags" => [tag.name]},
+            "channel" => "#welcome", "filter" => "watch", "tags" => [tag.name],
           )
 
           post "/slack/command.json",
@@ -300,8 +300,8 @@ describe 'Slack', type: :request do
             token: token
 
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
-            {"channel" => "#welcome", "filter" => "watch", "tags" => [tag.name]},
-            {"channel" => "#welcome", "filter" => "follow", "tags" => nil},
+            { "channel" => "#welcome", "filter" => "watch", "tags" => [tag.name] },
+            "channel" => "#welcome", "filter" => "follow", "tags" => nil,
           )
         end
 
@@ -382,7 +382,7 @@ describe 'Slack', type: :request do
             token: token
 
           expect(DiscourseSlack::Slack.get_store(category.id)).to eq([
-            {"channel" => "#general", "filter" => "follow", "tags" => nil},
+            { "channel" => "#general", "filter" => "follow", "tags" => nil },
           ])
         end
       end
@@ -426,7 +426,7 @@ describe 'Slack', type: :request do
             token: token
 
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
-            {"channel" => "#welcome", "filter" => "follow", "tags" => [tag_2.name]},
+            "channel" => "#welcome", "filter" => "follow", "tags" => [tag_2.name],
           )
         end
 
@@ -445,7 +445,7 @@ describe 'Slack', type: :request do
             token: token
 
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
-            {"channel" => "#general", "filter" => "follow", "tags" => [tag.name]},
+            "channel" => "#general", "filter" => "follow", "tags" => [tag.name],
           )
         end
 
@@ -464,7 +464,7 @@ describe 'Slack', type: :request do
             token: token
 
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
-            {"channel" => "#welcome", "filter" => "follow", "tags" => nil},
+            "channel" => "#welcome", "filter" => "follow", "tags" => nil,
           )
         end
       end

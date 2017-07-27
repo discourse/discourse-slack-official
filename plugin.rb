@@ -166,7 +166,7 @@ after_initialize do
     end
 
     def topic_route(text)
-      url = text.slice(text.index("<") + 1, text.index(">") -1)
+      url = text.slice(text.index("<") + 1, text.index(">") - 1)
       url.sub!(Discourse.base_url, '')
       route = Rails.application.routes.recognize_path(url)
       raise Discourse::NotFound unless route[:controller] == 'topics' && route[:topic_id]
