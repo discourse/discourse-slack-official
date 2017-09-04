@@ -27,16 +27,18 @@ en:
         with_tags: " with tags *%{tags}*"
       available_categories: "\nHere are your available categories: %{list}"
     help: |
-      `/discourse [watch|follow|mute|help|status] [category|tag:name|all]`
+      `/discourse [watch|follow|mute|unset|help|status] [category|tag:name|all]`
       *watch* – notify this channel for new topics and new replies
       *follow* – notify this channel for new topics
       *mute* – stop notifying this channel
       *status* – show current notification state and categories
+      *unset* – unset a notification state for a tag or category
     command:
       past:
         mute: 'muted'
         follow: 'followed'
         watch: 'watched'
+        unset: 'unset'
       present:
         mute: 'muting'
         follow: 'following'

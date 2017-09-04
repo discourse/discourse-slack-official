@@ -20,7 +20,7 @@ module DiscourseSlack
     end
 
     def self.format_channel(name)
-      (name.include?("@") || name.include?("\#"))? name : "<##{name}>"
+      (name.include?("@") || name.include?("\#")) ? name : "<##{name}>"
     end
 
     def self.format_tags(names)
@@ -35,7 +35,7 @@ module DiscourseSlack
     end
 
     def self.status(channel)
-      rows = PluginStoreRow.where(plugin_name: DiscourseSlack::PLUGIN_NAME).where("key ~* :pat", :pat => '^category_.*')
+      rows = PluginStoreRow.where(plugin_name: DiscourseSlack::PLUGIN_NAME).where("key ~* :pat", pat: '^category_.*')
       text = ""
 
       categories = rows.map { |item| item.key.gsub('category_', '') }
@@ -76,7 +76,7 @@ module DiscourseSlack
 
       topic = post.topic
 
-      category = (topic.category.parent_category) ? "[#{topic.category.parent_category.name}/#{topic.category.name}]": "[#{topic.category.name}]"
+      category = (topic.category.parent_category) ? "[#{topic.category.parent_category.name}/#{topic.category.name}]" : "[#{topic.category.name}]"
 
       icon_url =
         if !SiteSetting.slack_icon_url.blank?
@@ -103,8 +103,8 @@ module DiscourseSlack
 
       record = ::PluginStore.get(DiscourseSlack::PLUGIN_NAME, "topic_#{post.topic.id}_#{channel}")
 
-      if (SiteSetting.slack_access_token.empty? || post.is_first_post? || record.blank? || (record.present? &&  ((Time.now.to_i - record[:ts].split('.')[0].to_i)/ 60) >= 5 ))
-        summary[:title] = "#{topic.title} #{(category == '[uncategorized]')? '' : category} #{topic.tags.present? ? topic.tags.map(&:name).join(', ') : ''}"
+      if (SiteSetting.slack_access_token.empty? || post.is_first_post? || record.blank? || (record.present? && ((Time.now.to_i - record[:ts].split('.')[0].to_i) / 60) >= 5))
+        summary[:title] = "#{topic.title} #{(category == '[uncategorized]') ? '' : category} #{topic.tags.present? ? topic.tags.map(&:name).join(', ') : ''}"
         summary[:title_link] = post.full_url
         summary[:thumb_url] = post.full_url
       end
@@ -117,28 +117,61 @@ module DiscourseSlack
       "#{KEY_PREFIX}#{id.present? ? id : '*'}"
     end
 
-    def self.set_filter_by_id(id, channel, filter, tags = nil, channel_id = nil)
-      data = get_store(id)
+    def self.update_tag_filter(channel, filter, tag)
+      data = get_store(nil)
+      to_delete = []
+
+      index = data.index do |item|
+        next unless item["channel"] == channel
+        if item["tags"]
+          item["tags"] = item["tags"] - [tag]
+          to_delete << item if item["tags"].empty?
+        end
+        item["tags"] && item["filter"] == filter
+      end
+
+      if filter != "unset"
+        data[index]['tags'].push(tag) if index
+        data.push(channel: channel, filter: filter, tags: [tag]) if !index
+      end
+
+      data = data - to_delete
+      PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(nil), data)
+    end
+
+    def self.update_all_filter(channel, filter)
+      update_category_filter(channel, filter, nil)
+    end
+
+    def self.update_category_filter(channel, filter, category_id)
+      data = get_store(category_id)
+      index = data.index do |item|
+        item["channel"] == channel && !item["tags"]
+      end
+
+      if index && filter == "unset"
+        data.delete data[index]
+      end
+
+      if filter != "unset"
+        data[index]['filter'] = filter if index
+        data.push(channel: channel, filter: filter, tags: nil) if !index
+      end
+
+      PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(category_id), data)
+    end
+
+    def self.create_filter(category_id, channel, filter, tags)
+      data = get_store(category_id)
       tags = Tag.where(name: tags).pluck(:name)
       tags = nil if tags.blank?
 
-      index = data.index do |filter|
-        filter["channel"] == channel || filter["channel"] == channel_id
-      end
-
-      if index
-        data[index]['filter'] = filter
-        data[index]['channel'] = channel
-        data[index]['tags'] = data[index]['tags'].concat(tags).uniq
-      else
-        data.push(channel: channel, filter: filter, tags: tags)
-      end
-
-      PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(id), data)
+      data.push(channel: channel, filter: filter, tags: tags)
+      PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(category_id), data)
     end
 
-    def self.delete_filter(id, channel, tags)
-      data = get_store(id)
+    def self.delete_filter(category_id, channel, tags)
+      data = get_store(category_id)
       tags = nil if tags.blank?
 
       data.delete_if do |i|
@@ -146,22 +179,22 @@ module DiscourseSlack
       end
 
       if data.empty?
-        PluginStore.remove(DiscourseSlack::PLUGIN_NAME, get_key(id))
+        PluginStore.remove(DiscourseSlack::PLUGIN_NAME, get_key(category_id))
       else
-        PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(id), data)
+        PluginStore.set(DiscourseSlack::PLUGIN_NAME, get_key(category_id), data)
       end
     end
 
-    def self.get_store(id = nil)
-      PluginStore.get(DiscourseSlack::PLUGIN_NAME, get_key(id)) || []
+    def self.get_store(category_id = nil)
+      PluginStore.get(DiscourseSlack::PLUGIN_NAME, get_key(category_id)) || []
     end
 
     def self.get_store_by_channel(channel, category_id = nil)
-      get_store(category_id).select{ |r| format_channel(r[:channel]) == channel }
+      get_store(category_id).select { |r| format_channel(r[:channel]) == channel }
     end
 
-    def self.notify(id)
-      post = Post.find_by(id: id)
+    def self.notify(post_id)
+      post = Post.find_by(id: post_id)
       return if post.blank? || post.post_type != Post.types[:regular] || !guardian.can_see?(post)
 
       topic = post.topic
@@ -182,7 +215,7 @@ module DiscourseSlack
         topic_tags = (SiteSetting.tagging_enabled? && topic.tags.present?) ? topic.tags.pluck(:name) : []
 
         next if SiteSetting.tagging_enabled? && i[:tags].present? && (topic_tags & i[:tags]).count == 0
-        next if ( i[:filter] == 'mute') || ( !(post.is_first_post?) && i[:filter] == 'follow' )
+        next if (i[:filter] == 'mute') || (!(post.is_first_post?) && i[:filter] == 'follow')
 
         message = slack_message(post, i[:channel])
 
@@ -191,7 +224,7 @@ module DiscourseSlack
           uri = ""
           record = ::PluginStore.get(DiscourseSlack::PLUGIN_NAME, "topic_#{post.topic.id}_#{i[:channel]}")
 
-          if (record.present? && ((Time.now.to_i - record[:ts].split('.')[0].to_i)/ 60) < 5 && record[:message][:attachments].length < 5)
+          if (record.present? && ((Time.now.to_i - record[:ts].split('.')[0].to_i) / 60) < 5 && record[:message][:attachments].length < 5)
             attachments = record[:message][:attachments]
             attachments.concat message[:attachments]
 
@@ -215,9 +248,9 @@ module DiscourseSlack
 
           response = http.request(Net::HTTP::Post.new(uri))
 
-          ::PluginStore.set(DiscourseSlack::PLUGIN_NAME, "topic_#{post.topic.id}_#{i[:channel]}", JSON.parse(response.body) )
+          ::PluginStore.set(DiscourseSlack::PLUGIN_NAME, "topic_#{post.topic.id}_#{i[:channel]}", JSON.parse(response.body))
         elsif !(SiteSetting.slack_outbound_webhook_url.empty?)
-          req = Net::HTTP::Post.new(URI(SiteSetting.slack_outbound_webhook_url), 'Content-Type' =>'application/json')
+          req = Net::HTTP::Post.new(URI(SiteSetting.slack_outbound_webhook_url), 'Content-Type' => 'application/json')
           req.body = message.to_json
           response = http.request(req)
         end

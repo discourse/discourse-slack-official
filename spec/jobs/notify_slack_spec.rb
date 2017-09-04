@@ -20,7 +20,7 @@ describe Jobs::NotifySlack do
       response = Jobs::NotifySlack.new.execute(post_id: post.id)
       expect(response[0]).to eq(nil)
 
-      DiscourseSlack::Slack.set_filter_by_id(category.id, "#general", "follow")
+      DiscourseSlack::Slack.create_filter(category.id, "#general", "follow", nil)
       response = Jobs::NotifySlack.new.execute(post_id: post.id)
 
       expect(response[0]).to eq("success")
@@ -34,7 +34,7 @@ describe Jobs::NotifySlack do
       response = Jobs::NotifySlack.new.execute(post_id: post.id)
       expect(response[0]).to eq(nil)
 
-      DiscourseSlack::Slack.set_filter_by_id(nil, "#general", "follow", [tag.name])
+      DiscourseSlack::Slack.create_filter(nil, "#general", "follow", [tag.name])
       response = Jobs::NotifySlack.new.execute(post_id: post.id)
 
       expect(response[0]).to eq("success")
@@ -47,7 +47,7 @@ describe Jobs::NotifySlack do
       user = Fabricate(:user)
 
       SiteSetting.slack_discourse_username = user.username
-      DiscourseSlack::Slack.set_filter_by_id(nil, "#general", "follow")
+      DiscourseSlack::Slack.create_filter(nil, "#general", "follow", nil)
 
       response = Jobs::NotifySlack.new.execute(post_id: post.id)
       expect(response).to eq(nil)

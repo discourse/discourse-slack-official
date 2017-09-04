@@ -1,5 +1,5 @@
 class DiscourseSlackEnabledSettingValidator
-  def initialize(opts={})
+  def initialize(opts = {})
     @opts = opts
   end
 

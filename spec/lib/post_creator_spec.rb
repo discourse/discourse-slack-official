@@ -17,19 +17,19 @@ RSpec.describe PostCreator do
       end
 
       it 'should schedule a job for slack post' do
-        Timecop.freeze do
-          post = PostCreator.new(topic.user,
-            raw: 'aaaaaaaaaaaaaaaaasdddddddddd sorry cat walked over my keyboard',
-            topic_id: topic.id
-          ).create!
+        freeze_time
 
-          job = Jobs::NotifySlack.jobs.last
+        post = PostCreator.new(topic.user,
+          raw: 'aaaaaaaaaaaaaaaaasdddddddddd sorry cat walked over my keyboard',
+          topic_id: topic.id
+        ).create!
 
-          expect(job['at'])
-            .to eq((Time.zone.now + SiteSetting.post_to_slack_window_secs.seconds).to_f)
+        job = Jobs::NotifySlack.jobs.last
 
-          expect(job['args'].first['post_id']).to eq(post.id)
-        end
+        expect(job['at'])
+          .to eq((Time.zone.now + SiteSetting.post_to_slack_window_secs.seconds).to_f)
+
+        expect(job['args'].first['post_id']).to eq(post.id)
       end
     end
 
