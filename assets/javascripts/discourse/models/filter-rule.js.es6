@@ -9,11 +9,16 @@ export default RestModel.extend({
 
   @computed('category_id')
   categoryName(categoryId) {
-    if (categoryId)
-      return Category.findById(categoryId).get('name');
-    else {
+    if (!categoryId) {
       return I18n.t('slack.choose.all_categories');
     }
+
+    const category = Category.findById(categoryId);
+    if (!category) {
+      return I18n.t('slack.choose.deleted_category');
+    }
+
+    return category.get('name');
   },
 
   @computed('filter')
