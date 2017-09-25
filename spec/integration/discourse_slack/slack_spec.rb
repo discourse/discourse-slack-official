@@ -15,14 +15,14 @@ describe 'Slack', type: :request do
   shared_examples 'admin constraints' do |action, route|
     context 'when user is not signed in' do
       it 'should raise the right error' do
-        expect { send(action, route) }.to raise_error(ActionController::RoutingError)
+        expect { public_send(action, route) }.to raise_error(ActionController::RoutingError)
       end
     end
 
     context 'when user is not an admin' do
       it 'should raise the right error' do
         sign_in(Fabricate(:user))
-        expect { send(action, route) }.to raise_error(ActionController::RoutingError)
+        expect { public_send(action, route) }.to raise_error(ActionController::RoutingError)
       end
     end
   end
@@ -71,11 +71,12 @@ describe 'Slack', type: :request do
         category_id = 1
         filter = 'follow'
 
-        put '/slack/list.json',
+        put '/slack/list.json', params: {
           channel: channel,
           category_id: category_id,
           filter: filter,
           tags: [tag.name, 'sometag']
+        }
 
         expect(response).to be_success
 
@@ -101,10 +102,11 @@ describe 'Slack', type: :request do
       it 'should be able to delete a filter' do
         DiscourseSlack::Slack.create_filter(category.id, '#some', 'follow', [tag.name])
 
-        delete '/slack/list.json',
+        delete '/slack/list.json', params: {
           category_id: category.id,
           channel: '#some',
           tags: [tag.name]
+        }
 
         expect(DiscourseSlack::Slack.get_store(category.id)).to eq([])
       end
@@ -122,7 +124,7 @@ describe 'Slack', type: :request do
         token = 'sometoken'
         SiteSetting.slack_incoming_webhook_token = token
 
-        post '/slack/command.json', text: 'help', token: token
+        post '/slack/command.json', params: { text: 'help', token: token }
 
         expect(response.status).to eq(200)
       end
@@ -130,14 +132,14 @@ describe 'Slack', type: :request do
 
     describe 'when the token is invalid' do
       it 'should raise the right error' do
-        expect { post '/slack/command.json', text: 'help' }
+        expect { post '/slack/command.json', params: { text: 'help' } }
           .to raise_error(ActionController::ParameterMissing)
       end
     end
 
     describe 'when incoming webhook token has not been set' do
       it 'should raise the right error' do
-        post '/slack/command.json', text: 'help', token: 'some token'
+        post '/slack/command.json', params: { text: 'help', token: 'some token' }
 
         expect(response.status).to eq(403)
       end
@@ -152,10 +154,11 @@ describe 'Slack', type: :request do
 
       describe 'follow command' do
         it 'should add the new filter correctly' do
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "follow #{category.slug}",
             channel_name: 'welcome',
             token: token
+          }
 
           json = JSON.parse(response.body)
 
@@ -169,10 +172,11 @@ describe 'Slack', type: :request do
             "tags" => nil
           ])
 
-          post '/slack/command.json',
+          post '/slack/command.json', params: {
             text: "status",
             channel_name: "welcome",
             token: token
+          }
 
           json = JSON.parse(response.body)
 
@@ -190,10 +194,11 @@ describe 'Slack', type: :request do
         it 'should add the a new tag filter correctly' do
           SiteSetting.tagging_enabled = true
 
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "follow tag:#{tag.name}",
             channel_name: 'welcome',
             token: token
+          }
 
           expect(response).to be_success
 
@@ -211,10 +216,11 @@ describe 'Slack', type: :request do
 
           tag_2 = Fabricate(:tag)
 
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "follow tag:#{tag_2.name}",
             channel_name: 'welcome',
             token: token
+          }
 
           expect(response).to be_success
 
@@ -229,34 +235,38 @@ describe 'Slack', type: :request do
           SiteSetting.tagging_enabled = true
           tag_2 = Fabricate(:tag)
 
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "follow tag:#{tag.name}",
             channel_name: 'welcome',
             token: token
+          }
 
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "follow tag:#{tag_2.name}",
             channel_name: 'welcome',
             token: token
+          }
 
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
             "channel" => "#welcome", "filter" => "follow", "tags" => [tag.name, tag_2.name],
           )
 
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "watch tag:#{tag.name}",
             channel_name: 'welcome',
             token: token
+          }
 
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
             { "channel" => "#welcome", "filter" => "follow", "tags" => [tag_2.name] },
             "channel" => "#welcome", "filter" => "watch", "tags" => [tag.name],
           )
 
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "watch tag:#{tag_2.name}",
             channel_name: 'welcome',
             token: token
+          }
 
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
             "channel" => "#welcome", "filter" => "watch", "tags" => [tag.name, tag_2.name],
@@ -265,10 +275,12 @@ describe 'Slack', type: :request do
 
         it 'returns a not found message when a tag does not exist' do
           SiteSetting.tagging_enabled = true
-          post "/slack/command.json",
+
+          post "/slack/command.json", params: {
             text: "follow tag:non-existent",
             channel_name: 'welcome',
             token: token
+          }
 
           expect(response).to be_success
 
@@ -285,19 +297,21 @@ describe 'Slack', type: :request do
           SiteSetting.tagging_enabled = true
           tag_2 = Fabricate(:tag)
 
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "watch tag:#{tag.name}",
             channel_name: 'welcome',
             token: token
+          }
 
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
             "channel" => "#welcome", "filter" => "watch", "tags" => [tag.name],
           )
 
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "follow all",
             channel_name: 'welcome',
             token: token
+          }
 
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
             { "channel" => "#welcome", "filter" => "watch", "tags" => [tag.name] },
@@ -306,10 +320,11 @@ describe 'Slack', type: :request do
         end
 
         it 'should update a category filter correctly' do
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "follow #{category.slug}",
             channel_name: 'welcome',
             token: token
+          }
 
           json = JSON.parse(response.body)
 
@@ -323,10 +338,11 @@ describe 'Slack', type: :request do
             "tags" => nil
           ])
 
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "watch #{category.slug}",
             channel_name: 'welcome',
             token: token
+          }
 
           json = JSON.parse(response.body)
 
@@ -344,15 +360,17 @@ describe 'Slack', type: :request do
 
       describe 'unset category subscription' do
         it 'should unset the subscription and return the right response' do
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "follow #{category.slug}",
             channel_name: 'welcome',
             token: token
+          }
 
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "unset #{category.slug}",
             channel_name: 'welcome',
             token: token
+          }
 
           expect(response).to be_success
 
@@ -366,20 +384,23 @@ describe 'Slack', type: :request do
         end
 
         it 'should not unset the category filter for another channel' do
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "follow #{category.slug}",
             channel_name: 'welcome',
             token: token
+          }
 
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "follow #{category.slug}",
             channel_name: 'general',
             token: token
+          }
 
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "unset #{category.slug}",
             channel_name: 'welcome',
             token: token
+          }
 
           expect(DiscourseSlack::Slack.get_store(category.id)).to eq([
             { "channel" => "#general", "filter" => "follow", "tags" => nil },
@@ -393,17 +414,21 @@ describe 'Slack', type: :request do
         end
 
         it 'should unset the tag subscription and return the right response' do
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "follow tag:#{tag.name}",
             channel_name: 'welcome',
             token: token
-          post "/slack/command.json",
+          }
+
+          post "/slack/command.json", params: {
             text: "unset tag:#{tag.name}",
             channel_name: 'welcome',
             token: token
+          }
 
           expect(response).to be_success
           json = JSON.parse(response.body)
+
           expect(json["text"]).to eq(I18n.t(
             "slack.message.success.tag", command: "Unset", name: tag.name
           ))
@@ -412,18 +437,24 @@ describe 'Slack', type: :request do
 
         it 'should not unset other tag subscriptions for the channel' do
           tag_2 = Fabricate(:tag)
-          post "/slack/command.json",
+
+          post "/slack/command.json", params: {
             text: "follow tag:#{tag.name}",
             channel_name: 'welcome',
             token: token
-          post "/slack/command.json",
+          }
+
+          post "/slack/command.json", params: {
             text: "follow tag:#{tag_2.name}",
             channel_name: 'welcome',
             token: token
-          post "/slack/command.json",
+          }
+
+          post "/slack/command.json", params: {
             text: "unset tag:#{tag.name}",
             channel_name: 'welcome',
             token: token
+          }
 
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
             "channel" => "#welcome", "filter" => "follow", "tags" => [tag_2.name],
@@ -431,18 +462,23 @@ describe 'Slack', type: :request do
         end
 
         it 'should not unset the tag subscription for another channel' do
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "follow tag:#{tag.name}",
             channel_name: 'welcome',
             token: token
-          post "/slack/command.json",
+          }
+
+          post "/slack/command.json", params: {
             text: "follow tag:#{tag.name}",
             channel_name: 'general',
             token: token
-          post "/slack/command.json",
+          }
+
+          post "/slack/command.json", params: {
             text: "unset tag:#{tag.name}",
             channel_name: 'welcome',
             token: token
+          }
 
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
             "channel" => "#general", "filter" => "follow", "tags" => [tag.name],
@@ -450,18 +486,23 @@ describe 'Slack', type: :request do
         end
 
         it 'should not unset the "all" category subscription for the channel' do
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "follow tag:#{tag.name}",
             channel_name: 'welcome',
             token: token
-          post "/slack/command.json",
+          }
+
+          post "/slack/command.json", params: {
             text: "follow all",
             channel_name: 'welcome',
             token: token
-          post "/slack/command.json",
+          }
+
+          post "/slack/command.json", params: {
             text: "unset tag:#{tag.name}",
             channel_name: 'welcome',
             token: token
+          }
 
           expect(DiscourseSlack::Slack.get_store).to contain_exactly(
             "channel" => "#welcome", "filter" => "follow", "tags" => nil,
@@ -471,10 +512,11 @@ describe 'Slack', type: :request do
 
       describe 'mute command' do
         it 'should the new filter correctly' do
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "mute #{category.slug}",
             channel_name: 'welcome',
             token: token
+          }
 
           json = JSON.parse(response.body)
 
@@ -492,10 +534,11 @@ describe 'Slack', type: :request do
         it 'should add the a new tag filter correctly' do
           SiteSetting.tagging_enabled = true
 
-          post "/slack/command.json",
+          post "/slack/command.json", params: {
             text: "mute tag:#{tag.name}",
             channel_name: 'welcome',
             token: token
+          }
 
           json = JSON.parse(response.body)
 
@@ -509,10 +552,11 @@ describe 'Slack', type: :request do
             "tags" => [tag.name]
           ])
 
-          post '/slack/command.json',
+          post '/slack/command.json', params: {
             text: "status",
             channel_name: "welcome",
             token: token
+          }
 
           json = JSON.parse(response.body)
 
@@ -527,7 +571,9 @@ describe 'Slack', type: :request do
 
       describe 'help command' do
         it 'should return the right response' do
-          post '/slack/command.json', text: "help", channel_name: "welcome", token: token
+          post '/slack/command.json', params: {
+            text: "help", channel_name: "welcome", token: token
+          }
 
           expect(response).to be_success
 
@@ -539,10 +585,11 @@ describe 'Slack', type: :request do
 
       describe 'status command' do
         it 'should return the right response' do
-          post '/slack/command.json',
+          post '/slack/command.json', params: {
             text: "status",
             channel_name: "welcome",
             token: token
+          }
 
           expect(response).to be_success
 
