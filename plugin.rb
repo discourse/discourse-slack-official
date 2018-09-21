@@ -11,6 +11,10 @@ register_asset "stylesheets/slack-admin.scss"
 load File.expand_path('../lib/validators/discourse_slack_enabled_setting_validator.rb', __FILE__)
 
 after_initialize do
+  AdminDashboardData.add_problem_check do
+    I18n.t("slack.not_supported")
+  end
+
   load File.expand_path('../lib/discourse_slack/slack.rb', __FILE__)
   load File.expand_path('../lib/discourse_slack/slack_message_formatter.rb', __FILE__)
 

@@ -13,6 +13,7 @@ en:
       slack_api_configs_are_empty: "You must set 'slack outbound webhook url' or 'slack access token' before enabling this setting."
       slack_discourse_username_is_empty: "You must set 'slack discourse username' before enabling this setting."
   slack:
+    not_supported: The <b>discourse-slack-official</b> plugin is no longer supported. Please migrate to <b><a href="https://github.com/discourse/discourse-chat-integration">discourse-chat-integration</a></b>, which supports all of the same functionality.
     message:
       not_found:
         tag: "I can't find the *%{name}* tag."
